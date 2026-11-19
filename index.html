@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhyN — how many units do you need, and why that many</title>
+<meta name="description" content="WhyN checks a sample size you were given, or plans one, and explains every number in one line each. One formula, no server, no accounts — a deterministic, independent second opinion.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>WhyN</h1>
+  <p class="tagline">How many units do you need, and why that many?</p>
+  <p class="positioning">A deterministic, independent second opinion. If you were given a sample size — by an AI assistant or anyone else — check it here before you spend anything: the same inputs always give the same answer, and every number comes with its reason in one line.</p>
+</header>
+
+<main>
+  <section aria-labelledby="path-h">
+    <h2 id="path-h">Start</h2>
+    <fieldset class="path-toggle">
+      <legend>Two ways in</legend>
+      <label><input type="radio" name="path" value="check" checked> <strong>Check a number</strong> — enter the size you were given first, then the design; see what it buys and what the formula needs instead.</label>
+      <label><input type="radio" name="path" value="plan"> <strong>Plan from scratch</strong> — enter the design and get the required size.</label>
+    </fieldset>
+    <div id="example-bar" role="group" aria-label="Worked examples">
+      <span>Worked examples:</span>
+      <button type="button" data-example="ex3">Check a number you were given</button>
+      <button type="button" data-example="ex1">Plan a main effect</button>
+      <button type="button" data-example="ex2">Plan an interaction</button>
+    </div>
+    <p id="example-story" class="story" hidden></p>
+  </section>
+
+  <section aria-labelledby="questions-h">
+    <h2 id="questions-h">The design, in plain words</h2>
+    <form id="questions" autocomplete="off"></form>
+  </section>
+
+  <section id="results" aria-live="polite" aria-labelledby="results-h">
+    <h2 id="results-h">The four numbers</h2>
+  </section>
+
+  <section id="budget" aria-label="The error budget"></section>
+  <section id="curve" aria-label="The verdict curve"></section>
+  <section id="example-why" hidden></section>
+  <section id="guardrails" aria-label="Notes on these choices"></section>
+
+  <section aria-labelledby="justify-h">
+    <h2 id="justify-h">The justification</h2>
+    <p>Every input, every number and the reason for each — written to paste into a preregistration, a grant, or a reply to reviewers, and to keep as an independent record beside any advice you received.</p>
+    <pre id="justification-text"></pre>
+    <button type="button" id="copy-justification">Copy the justification</button>
+  </section>
+
+  <section aria-labelledby="observed-h">
+    <h2 id="observed-h">Already have results?</h2>
+    <p>WhyN plans and checks designs before data exist. One thing it will not do:</p>
+    <button type="button" id="observed-power">What about power from my observed data?</button>
+    <p id="observed-power-note" class="note" hidden></p>
+  </section>
+</main>
+
+<footer>
+  <h2>How it works, and how to check it</h2>
+  <p>Every number comes from one equation, Δ/SE = z<sub>a</sub> + z<sub>b</sub>, under a normal approximation. The left side is the budget — how many standard errors the smallest effect worth detecting spans; the right side is how it is spent, on protection against false alarms and against misses. Sample sizes are always rounded up. The math is small enough to read in ten minutes (<code>src/core/</code>), and a reference script (<code>reference/two_condition.py</code>) prints every number the acceptance tests pin down.</p>
+  <p>WhyN covers one design family: a two-condition comparison — rates or means, paired or independent, a main effect or an interaction. For designs it does not cover (ANOVA, regression, survival, cluster-randomized, sequential or Bayesian), use <a href="https://www.psychologie.hhu.de/arbeitsgruppen/allgemeine-psychologie-und-arbeitspsychologie/gpower">G*Power</a>, <a href="https://cran.r-project.org/package=Superpower">Superpower</a> or <a href="https://declaredesign.org/">DeclareDesign</a> instead.</p>
+  <p>No accounts, no uploads, no trackers; your inputs live in the URL of this page and nowhere else. MIT license.</p>
+</footer>
+
+<script type="module" src="src/ui/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+{"description":"WhyN: a sample-size tool that explains its numbers.","name":"whyn","private":true,"scripts":{"check":"node scripts/page_check.mjs","test":"node --test"},"type":"module","version":"1.0.0"}
