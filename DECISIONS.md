@@ -322,3 +322,100 @@ option was taken and is recorded here.
       tests or the page check: 45 of 45 tests and every page-check
       line pass as they were. The scenario version stays 6, since
       no input or number changed.
+
+14. **A guided start (2026-11-19).** Asked for by the owner after #13
+    went live: the first visit was still overwhelming, it was not
+    clear where the answer would appear, and there was no place to
+    pick the experiment itself (chi-square, ANOVA, correlation).
+    Done by Claude, in the page layer only.
+    - The page now opens on two questions and nothing else: what you
+      want to do (check or plan a sample size), and what the
+      experiment compares. The details and the answer appear once
+      both are answered. A shared link still opens on its answer.
+      This supersedes the owner's decision log #8 (open on the plain
+      check example): the example stays, first in "Try an example".
+    - Step 2 is the experiment picker. Each choice is a design in
+      plain words with the test names people know it by: two
+      separate groups and a yes/no outcome (two-proportion z-test,
+      the same as chi-square on a 2×2 table); two separate groups
+      and a measurement (two-sample t-test); the same units under
+      both conditions and a measurement (paired t-test); the same
+      units under both conditions and a yes/no outcome over repeated
+      tries (paired comparison of rates). It sets the outcome and
+      assignment answers, so the details no longer ask them. This
+      settles the decision log's open proposal to organize by design
+      with test names as aliases.
+    - Designs WhyN does not size yet are named under the picker
+      (ANOVA, correlation, larger chi-square tables, survival,
+      clusters), each with a tool that does, because sizing them with
+      a two-condition formula would give the wrong number.
+    - The answer panel is titled "Your answer". Until the details
+      are complete it says what is still needed, and the copy
+      buttons wait.
+    - Page check: the start screen is checked (no numbers, the
+      picker, the test names, the uncovered designs, start over).
+      Q14's numbers are unchanged and now run behind the example's
+      button. No change to src/core, the scenario, the copy library
+      or the tests: 45 of 45 pass.
+
+15. **A steady page (2026-11-19).** Asked for by the owner: opening an
+    info button pushed the page around, choosing an experiment
+    changed the whole layout, and too many parts moved for a
+    researcher who is not tech-savvy. Done by Claude, page layer only.
+    - The frame is fixed from the first visit: steps 1 to 3 on the
+      left and the "Your answer" panel on the right, all in place
+      before anything is chosen. The panel says what will appear in
+      it; step 3 holds a one-line placeholder. Choosing fills them in
+      where they stand; the layout no longer switches from one column
+      to two, and the picker no longer folds to one line.
+    - Explanations open in one floating tooltip, the standard pattern:
+      it shows on hover with a mouse, a click or tap keeps it open,
+      and Esc, a click elsewhere or the button again closes it. It
+      sits over the page and moves nothing. The verdict table, the
+      example's story and the list of designs not covered yet open
+      the same way.
+    - Buttons that do nothing yet ("Copy the justification", "Read
+      it first", "Start over") are shown greyed out instead of
+      appearing later.
+    - Measured in a browser, on a 1280 px desktop, over seven common
+      interactions: blocks that moved or appeared went from 13 to 6,
+      and none of the remaining 6 is a jump of content above the
+      point clicked. The one deliberate shift left is switching
+      between checking and planning, which adds or removes the
+      "number you were given" question.
+    - The page check now covers the fixed frame, the tooltip opening
+      and Esc closing it. Q14's numbers are unchanged; its story
+      check now reads the example's story behind its label. No
+      change to src/core, the scenario, the copy library or the
+      tests: 45 of 45 pass.
+
+16. **Choices wait for Continue, and every choice has an example
+    (2026-11-19).** Asked for by the owner: answering step 2 changed
+    the page at once, before a person was sure, and the options in
+    steps 1 and 2 needed a plain example to choose by. Done by
+    Claude, page layer only.
+    - Steps 1 and 2 are held as choices until "Continue" is pressed.
+      Nothing else on the page reacts while a person is deciding.
+      After that the button reads "Apply changes": a changed choice
+      waits for it, and a short line under the button says the page
+      below still shows the earlier choice. Continue brings step 3
+      into view if it is off screen, gently, or at once when reduced
+      motion is set.
+    - Step 1 is now the same kind of option list as step 2, so the
+      two questions look and behave alike.
+    - Every option in steps 1 and 2 has an info button with a plain,
+      fictional example and a "pick this when" line. Two separate
+      groups and a yes/no outcome: a clinic texts a reminder to half
+      its patients and compares the share who show up. Two separate
+      groups and a measurement: tomato plants on fertilizer A or B,
+      compared on average height. The same units under both
+      conditions and a measurement: each volunteer's reaction time
+      with and without coffee. The same units and a yes/no over
+      repeated tries: each language-app exercise in its old and new
+      design, compared on the share answered correctly. Step 2's own
+      info button says what counts as a unit.
+    - The info button sits outside each option's label, so opening
+      an example never picks the option.
+    - The page check covers the held choices, Apply changes, and the
+      examples. No change to src/core, the scenario, the copy library
+      or the tests: 45 of 45 pass.

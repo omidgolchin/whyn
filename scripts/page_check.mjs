@@ -57,12 +57,63 @@ if (JSDOM) {
   const text = (sel) => window.document.querySelector(sel)?.textContent ?? '';
   const results = () => text('#results');
 
-  // Addendum 3: the page opens on the plain check — an AI-given 300
-  // students per group for a 4-point pass-rate rise (Q14).
+  // The start (decision log #10, steadied by #15): the frame is fixed
+  // from the first visit. Steps 1-3 and the answer panel are all in
+  // place; the panel says what will appear, step 3 holds a one-line
+  // placeholder, and no numbers show until both questions are answered.
+  const doc = window.document;
+  const box = (sel) => { const e = doc.querySelector(sel); return e && !e.hidden && !e.closest('[hidden]'); };
+  check(box('#answer') && text('#answer-h') === 'Your answer', 'start: the answer panel is in place and says what it is');
+  check(results().includes('will appear here'), 'start: the panel says what will appear in it');
+  check(box('#step-details') && box('#details-placeholder'), 'start: step 3 is in place, with a placeholder');
+  check(doc.querySelectorAll('#experiment-picker input[name="experiment"]').length === 4, 'start: four experiments to pick from');
+  check(text('#experiment-picker').includes('chi-square') && text('#experiment-picker').includes('t-test'), 'start: the picker names the tests people know');
+  check(text('#experiment-picker').includes('ANOVA') && text('#experiment-picker').includes('correlation'), 'start: the designs not covered yet are named');
+  check(!results().includes('units'), 'start: no numbers before the questions');
+  check(doc.querySelector('#copy-justification').disabled && doc.querySelector('#start-over').disabled, 'start: buttons wait, greyed out, rather than appearing later');
+
+  const pick = (name, value) => {
+    const r = doc.querySelector(`input[name="${name}"][value="${value}"]`);
+    r.checked = true;
+    r.dispatchEvent(new window.Event('change', { bubbles: true }));
+  };
+  pick('path', 'plan');
+  check(!results().includes('Still needed') && box('#details-placeholder') && doc.querySelector('#apply-choices').disabled, 'start: one answer is not enough');
+  pick('experiment', 'mean-independent');
+  check(box('#details-placeholder') && !doc.querySelector('#apply-choices').disabled, 'choosing does not change the page until Continue');
+  doc.querySelector('#apply-choices').click();
+  check(!box('#details-placeholder') && doc.querySelector('#q-delta'), 'Continue fills step 3 in place');
+  check(results().includes('Still needed'), 'the answer panel names what is still needed');
+  check(doc.querySelectorAll('#experiment-picker input[name="experiment"]').length === 4 &&
+    doc.querySelector('input[name="experiment"][value="mean-independent"]').checked, 'the picker stays as it was, with the choice marked');
+  check(!doc.querySelector('input[name="outcome"]'), 'the details do not ask again what step 2 answered');
+  check(text('#apply-choices') === 'Apply changes' && doc.querySelector('#apply-choices').disabled, 'after Continue the button waits for a change');
+  pick('experiment', 'rate-independent');
+  check(doc.querySelector('#q-sd') && !doc.querySelector('input[name="baseRateChoice"]') && !doc.querySelector('#apply-choices').disabled,
+    'a changed choice waits for Apply changes; the questions below stay as they were');
+  pick('experiment', 'mean-independent');
+  check(doc.querySelector('#apply-choices').disabled, 'changing back needs no apply');
+  check(text('#pop-exp-rate-independent').includes('For example') && text('#pop-path-check').includes('For example'), 'every choice in steps 1 and 2 has an example behind its info button');
+
+  // Explanations open in one floating tooltip and move nothing.
+  const deltaInfo = doc.querySelector('button.info[data-pop="hint-delta"]');
+  deltaInfo.click();
+  const pop = doc.querySelector('#whyn-pop');
+  check(!pop.hidden && pop.textContent.length > 20 && deltaInfo.getAttribute('aria-expanded') === 'true', 'an info button opens the tooltip');
+  doc.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+  check(pop.hidden && deltaInfo.getAttribute('aria-expanded') === 'false', 'Esc closes the tooltip');
+
+  doc.querySelector('#start-over').click();
+  check(!doc.querySelector('input[name="path"]:checked') && box('#details-placeholder') && results().includes('will appear here'), 'start over returns to the first visit');
+
+  // Q14 (decision log #10 moved it behind the first example): the
+  // plain check, an AI-given 300 students per group for a 4-point
+  // pass-rate rise, keeps every number it had as the landing page.
+  doc.querySelector('button[data-example="ex4"]').click();
   check(results().includes('4,906 units'), 'Q14: opens on the plain check: required total 4,906');
   check(results().includes('11.44 points'), 'Q14: MDE 11.44 points at the given size');
   check(results().includes('16.4%'), 'Q14: verdict chance 16.4% at delta');
-  check(!window.document.querySelector('#example-story').hidden, 'Q14: the plain check story is visible');
+  check(!window.document.querySelector('#example-chip').hidden && text('#example-story').includes('300 per group'), 'Q14: the example is named, with its story one click away');
   check(text('#justification-text').includes('600 units'), 'Q14: justification mentions the given 600 units');
   check(results().includes('Assumed:'), 'Q4: the assumption line is shown under the numbers');
   check(results().includes("base rate 50% (you didn't know it)"), 'Q4: an unknown base rate is named as an assumption');
@@ -109,8 +160,10 @@ if (JSDOM) {
   const pathRadio = (v) => window.document.querySelector(`input[name="path"][value="${v}"]`);
   pathRadio('plan').checked = true;
   pathRadio('plan').dispatchEvent(new window.Event('change', { bubbles: true }));
+  window.document.querySelector('#apply-choices').click();
   pathRadio('check').checked = true;
   pathRadio('check').dispatchEvent(new window.Event('change', { bubbles: true }));
+  window.document.querySelector('#apply-choices').click();
 
   const sizeInput = window.document.querySelector('#q-givenSize');
   sizeInput.value = '300';

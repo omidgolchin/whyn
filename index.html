@@ -12,48 +12,74 @@
 <header class="masthead">
   <div class="brand">
     <h1>WhyN</h1>
-    <p class="tagline">Were you given a sample size? Check it before you spend anything, or plan one from scratch. Same inputs, same answer, and every number comes with its reason.</p>
+    <p class="tagline">How many units does your experiment need, and why that many? Check a number you were given, or plan one from scratch.</p>
   </div>
-  <details class="examples" id="example-menu">
-    <summary>Try an example</summary>
-    <div id="example-bar" class="example-list" role="group" aria-label="Worked examples">
-      <button type="button" data-example="ex4"><strong>Check</strong> 300 students per group, from an AI</button>
-      <button type="button" data-example="ex3"><strong>Check</strong> 400 exercises per subgroup, paired</button>
-      <button type="button" data-example="ex1"><strong>Plan</strong> a main effect, paired</button>
-      <button type="button" data-example="ex2"><strong>Plan</strong> an interaction, paired</button>
-    </div>
-  </details>
+  <div class="masthead-actions">
+    <button type="button" id="start-over" class="quiet" disabled>Start over</button>
+    <details class="examples" id="example-menu">
+      <summary>Try an example</summary>
+      <div id="example-bar" class="example-list" role="group" aria-label="Worked examples">
+        <button type="button" data-example="ex4"><strong>Check</strong> 300 students per group, from an AI</button>
+        <button type="button" data-example="ex3"><strong>Check</strong> 400 exercises per subgroup, paired</button>
+        <button type="button" data-example="ex1"><strong>Plan</strong> a main effect, paired</button>
+        <button type="button" data-example="ex2"><strong>Plan</strong> an interaction, paired</button>
+      </div>
+    </details>
+  </div>
 </header>
 
 <main>
-  <div class="workspace">
-    <section class="ask" aria-labelledby="ask-h">
-      <h2 id="ask-h" class="visually-hidden">Your design</h2>
-      <fieldset class="path-toggle">
-        <legend class="visually-hidden">What do you want to do?</legend>
-        <label><input type="radio" name="path" value="check" checked><span>Check a number</span></label>
-        <label><input type="radio" name="path" value="plan"><span>Plan from scratch</span></label>
-      </fieldset>
-      <p id="example-story" class="story" hidden></p>
-      <form id="questions" autocomplete="off"></form>
+  <div class="workspace" id="flow">
+    <section class="ask" aria-label="Your experiment">
+      <div class="step step-path">
+        <h2 class="step-title"><span class="step-n" aria-hidden="true">1</span> What do you want to do?</h2>
+        <fieldset class="exp-list path-list">
+          <legend class="visually-hidden">What do you want to do?</legend>
+          <div class="exp-row">
+            <label class="exp"><input type="radio" name="path" value="check"><span class="exp-body"><span class="exp-title">Check a sample size</span><span class="exp-tests">Someone gave you a number. See if it is enough.</span></span></label>
+            <button type="button" class="info exp-info" data-pop="pop-path-check" aria-controls="whyn-pop" aria-expanded="false" aria-label="An example of checking a sample size">i</button>
+          </div>
+          <div class="exp-row">
+            <label class="exp"><input type="radio" name="path" value="plan"><span class="exp-body"><span class="exp-title">Plan a sample size</span><span class="exp-tests">No number yet. Work out how many you need.</span></span></label>
+            <button type="button" class="info exp-info" data-pop="pop-path-plan" aria-controls="whyn-pop" aria-expanded="false" aria-label="An example of planning a sample size">i</button>
+          </div>
+        </fieldset>
+        <div id="pop-path-check" class="pop-src" hidden><p class="why-label">Check a sample size</p><p>For example, an AI assistant told you to recruit 300 people per group to detect a 4-point rise in a pass rate. WhyN shows whether 300 can find that rise, and what it would take if not.</p><p>Pick this when you already have a number from someone or somewhere.</p></div>
+        <div id="pop-path-plan" class="pop-src" hidden><p class="why-label">Plan a sample size</p><p>For example, you want to detect a 5-point rise in a pass rate and have no number yet. WhyN works out how many people you need, with the reason for each number.</p><p>Pick this when you are designing the experiment from scratch.</p></div>
+      </div>
+      <div class="step step-experiment">
+        <h2 class="step-title"><span class="step-n" aria-hidden="true">2</span> What does your experiment compare? <button type="button" class="info" data-pop="pop-unit" aria-controls="whyn-pop" aria-expanded="false" aria-label="What counts as a unit?">i</button></h2>
+        <div id="pop-unit" class="pop-src" hidden><p class="why-label">What counts as a unit?</p><p>A unit is whatever gets a condition: a person, a plant, a plot, a classroom, an exercise. "Both conditions" means each unit is measured under each one.</p></div>
+        <div id="experiment-picker"></div>
+        <div class="apply-row">
+          <button type="button" id="apply-choices" class="primary" disabled>Continue</button>
+          <span id="apply-note" class="apply-note" aria-live="polite"></span>
+        </div>
+      </div>
+      <div class="step step-details" id="step-details">
+        <div class="step-head">
+          <h2 class="step-title"><span class="step-n" aria-hidden="true">3</span> The details</h2>
+          <span id="example-chip" class="chip" hidden><span id="example-chip-name"></span><button type="button" class="info" data-pop="example-story" aria-controls="whyn-pop" aria-expanded="false" aria-label="About this example">i</button></span>
+        </div>
+        <div id="example-story" class="pop-src" hidden></div>
+        <p id="details-placeholder" class="placeholder">The questions for your experiment appear here once steps 1 and 2 are answered.</p>
+        <form id="questions" autocomplete="off"></form>
+      </div>
     </section>
 
-    <aside class="answer" aria-label="The answer">
+    <aside class="answer" id="answer" aria-labelledby="answer-h">
+      <h2 id="answer-h" class="answer-title">Your answer</h2>
       <div id="results" aria-live="polite"></div>
       <div id="guardrails"></div>
-      <div class="actions">
-        <button type="button" id="copy-justification" class="primary">Copy the justification</button>
-        <button type="button" id="show-justification" class="quiet">Read it first</button>
+      <div class="actions" id="answer-actions">
+        <button type="button" id="copy-justification" class="primary" disabled>Copy the justification</button>
+        <button type="button" id="show-justification" class="quiet" disabled>Read it first</button>
       </div>
     </aside>
   </div>
 
-  <section class="more" aria-labelledby="more-h">
+  <section class="more" id="more" aria-labelledby="more-h">
     <h2 id="more-h">More detail, when you want it</h2>
-    <details id="why-details" hidden>
-      <summary>Why the example's numbers came out this way</summary>
-      <div id="example-why"></div>
-    </details>
     <details id="workings-details">
       <summary>How the numbers trade off: the error budget and the verdict curve</summary>
       <div id="budget" aria-label="The error budget"></div>
@@ -75,6 +101,10 @@
       <p>Every number comes from one equation, Δ/SE = z<sub>a</sub> + z<sub>b</sub>, under a normal approximation. The left side is the budget: how many standard errors the smallest effect worth detecting spans. The right side is how it is spent, on protection against false alarms and against misses. Sample sizes are always rounded up. The math is small enough to read in ten minutes (<code>src/core/</code>), and a reference script (<code>reference/two_condition.py</code>) prints every number the acceptance tests pin down.</p>
       <p>WhyN covers one design family: a two-condition comparison of rates or means, paired or independent, a main effect or an interaction. For designs it does not cover (ANOVA, regression, survival, cluster-randomized, sequential or Bayesian), use <a href="https://www.psychologie.hhu.de/arbeitsgruppen/allgemeine-psychologie-und-arbeitspsychologie/gpower">G*Power</a>, <a href="https://cran.r-project.org/package=Superpower">Superpower</a> or <a href="https://declaredesign.org/">DeclareDesign</a> instead.</p>
     </details>
+    <details id="why-details" hidden>
+      <summary>Why the example's numbers came out this way</summary>
+      <div id="example-why"></div>
+    </details>
   </section>
 </main>
 
@@ -83,6 +113,7 @@
 </footer>
 
 <a id="answer-jump" class="answer-jump" href="#results" hidden></a>
+<div id="whyn-pop" class="pop" role="dialog" aria-label="Explanation" aria-live="polite" hidden></div>
 
 <script type="module" src="src/ui/app.js"></script>
 </body>

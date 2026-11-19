@@ -24,11 +24,49 @@ const HINTS = {
 // their values, so nothing pre-filled is out of sight.
 const GROUPS = [
   { id: 'given', title: 'The number you were given', keys: ['givenSize', 'givenBasis'], paths: ['check'] },
-  { id: 'design', title: 'Your design', keys: ['outcome', 'assignment', 'subgroups', 'claim'] },
+  { id: 'design', title: 'Your design', keys: ['subgroups', 'claim'] },
   { id: 'effect', title: 'The effect you care about', keys: ['delta', 'deltaSameAdvice', 'baseRateChoice', 'baseRate', 'sd', 'sigma'] },
   { id: 'claims', title: 'What you will report', keys: ['claims', 'claimsRule'] },
   { id: 'conventions', title: 'Conventions', keys: ['alpha', 'sides', 'power', 'runsPerUnit'], collapsible: true },
 ];
+
+// Step 2: what the experiment compares. Each choice names the tests a
+// researcher already knows it by, and sets the two answers the engine
+// needs (outcome and assignment). Designs WhyN does not size yet are
+// listed too, so nobody sizes an ANOVA with a two-group formula.
+const EXPERIMENTS = [
+  { id: 'rate-independent', outcome: 'rate', assignment: 'independent',
+    title: 'Two separate groups, a yes/no outcome',
+    tests: 'Two-proportion z-test; the same as a chi-square test on a 2×2 table',
+    example: 'A clinic texts a reminder to half its patients and not to the other half, then compares the share who show up: say 70% without the text and 75% with it.',
+    pickIf: 'Pick this when each unit gets one condition and each unit\'s outcome is a yes or a no.' },
+  { id: 'mean-independent', outcome: 'mean', assignment: 'independent',
+    title: 'Two separate groups, a measurement',
+    tests: 'Two-sample t-test',
+    example: 'Tomato plants get fertilizer A or fertilizer B, one each, and you compare their average height after six weeks.',
+    pickIf: 'Pick this when each unit gets one condition and the outcome is a number you measure.' },
+  { id: 'mean-paired', outcome: 'mean', assignment: 'paired',
+    title: 'The same units under both conditions, a measurement',
+    tests: 'Paired t-test',
+    example: 'Each volunteer\'s reaction time is measured once with coffee and once without, and you compare the difference within each person.',
+    pickIf: 'Pick this when every unit is measured under both conditions and the outcome is a number.' },
+  { id: 'rate-paired', outcome: 'rate', assignment: 'paired',
+    title: 'The same units under both conditions, a yes/no outcome over repeated tries',
+    tests: 'Paired comparison of rates',
+    example: 'Each exercise in a language app is shown to many learners in its old design and in its new one, and you compare the share answered correctly, exercise by exercise.',
+    pickIf: 'Pick this when every unit gets both conditions and its outcome is a yes or no counted over many tries.' },
+];
+const LATER = [
+  { title: 'Three or more groups', tests: 'one-way ANOVA', tool: 'gpower' },
+  { title: 'How two measurements move together', tests: 'correlation, regression slope', tool: 'gpower' },
+  { title: 'Categories across more than two groups', tests: 'chi-square on a larger table', tool: 'gpower' },
+  { title: 'Time until an event', tests: 'log-rank, survival', tool: 'declare' },
+  { title: 'Whole classes, clinics or sites assigned together', tests: 'cluster-randomized', tool: 'declare' },
+];
+const TOOLS = {
+  gpower: '<a href="https://www.psychologie.hhu.de/arbeitsgruppen/allgemeine-psychologie-und-arbeitspsychologie/gpower">G*Power</a> sizes it',
+  declare: '<a href="https://declaredesign.org/">DeclareDesign</a> can simulate it',
+};
 
 // Display conversions: the form speaks in points and percents where a
 // person would; the engine speaks in proportions.
@@ -58,10 +96,9 @@ function stepFor(key, inputs) {
 }
 
 let currentInputs = { ...scenario.defaults() };
-let currentPath = 'check';
+let currentPath = null;
 let currentExampleId = null;
 let conventionsOpen = false;
-const openHints = new Set();
 
 const formEl = $('#questions');
 const resultsEl = $('#results');
@@ -73,6 +110,8 @@ const storyEl = $('#example-story');
 const whyEl = $('#example-why');
 const whyDetails = $('#why-details');
 const jumpEl = $('#answer-jump');
+const pickerEl = $('#experiment-picker');
+const startOverBtn = $('#start-over');
 
 function applies(question, inputs) {
   if (typeof question.appliesWhen === 'function') return question.appliesWhen(inputs);
@@ -92,26 +131,27 @@ function shown(q) {
   return applies(q, currentInputs);
 }
 
-// An info button and the explanation it opens. The explanation stays
-// in the page (closed) so it can be found, read aloud and copied.
+// An info button and the explanation it opens. The explanation lives
+// in the page as a hidden source (so it can be found and tested); the
+// button shows a copy in one floating tooltip that sits over the page
+// and moves nothing (see "Tooltips" below).
 function infoButton(key, label) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'info';
   btn.setAttribute('aria-label', `What does “${label}” mean?`);
-  btn.setAttribute('aria-controls', `hint-${key}`);
-  const open = openHints.has(key);
-  btn.setAttribute('aria-expanded', String(open));
+  btn.setAttribute('aria-controls', 'whyn-pop');
+  btn.setAttribute('aria-expanded', 'false');
   btn.textContent = 'i';
-  btn.dataset.hint = key;
+  btn.dataset.pop = `hint-${key}`;
   return btn;
 }
 function hintPara(key, text) {
-  const p = document.createElement('p');
-  p.className = 'hint';
+  const p = document.createElement('div');
+  p.className = 'pop-src';
   p.id = `hint-${key}`;
   p.textContent = text;
-  p.hidden = !openHints.has(key);
+  p.hidden = true;
   return p;
 }
 
@@ -370,16 +410,14 @@ function intervalRuler(result) {
 // One figure: a label, a value, an info button, and its reason. The
 // reason stays in the page, closed until asked for.
 function figure(key, label, value, { visible = '' } = {}) {
-  const open = openHints.has(`fig-${key}`);
   return `<div class="number" data-figure="${key}">
     <div class="number-head"><span class="number-label">${label}</span>` +
-    `<button type="button" class="info" data-hint="fig-${key}" aria-controls="hint-fig-${key}" aria-expanded="${open}" aria-label="Why: ${esc(label)}">i</button></div>
+    `<button type="button" class="info" data-pop="hint-fig-${key}" aria-controls="whyn-pop" aria-expanded="false" aria-label="Why: ${esc(label)}">i</button></div>
     <p class="big">${value}</p>${visible ? `<p class="keep">${visible}</p>` : ''}
   </div>`;
 }
 function figureWhy(key, label, why, extra = '') {
-  const open = openHints.has(`fig-${key}`);
-  return `<div class="why" id="hint-fig-${key}"${open ? '' : ' hidden'}><p class="why-label">${label}</p><p>${why}</p>${extra}</div>`;
+  return `<div class="pop-src${extra ? ' pop-wide' : ''}" id="hint-fig-${key}" hidden><p class="why-label">${label}</p><p>${why}</p>${extra}</div>`;
 }
 
 function renderResults(result) {
@@ -415,7 +453,7 @@ function renderResults(result) {
     if (currentPath === 'check') sub += ' Enter the size you were given to check it against this.';
     jump = `You need ${reqPer}`;
   }
-  parts.push(`<h2 id="results-h" class="headline">${head}</h2>`);
+  parts.push(`<p class="headline">${head}</p>`);
   parts.push(`<p class="subhead">${sub}</p>`);
   parts.push(intervalRuler(result));
 
@@ -466,7 +504,7 @@ function renderResults(result) {
   parts.push(figure('interval', 'Interval level', `${fmtNum(100 * result.intervalLevel)}% <span class="sub">per claim</span>`));
   whys.push(figureWhy('interval', 'Interval level', why3));
   parts.push('</div>');
-  parts.push(`<div class="whys">${whys.join('')}</div>`);
+  parts.push(`<div class="whys" hidden>${whys.join('')}</div>`);
 
   // The values the page assumed, named as assumptions.
   if (typeof scenario.assumptionLine === 'function') {
@@ -492,13 +530,14 @@ function renderExampleChrome() {
   const example = EXAMPLES.find((e) => e.id === currentExampleId);
   const matches = example && JSON.stringify(normalized(currentInputs)) === JSON.stringify(normalized(example.inputs));
   if (example && matches) {
-    storyEl.innerHTML = `<strong>${example.title}.</strong> ${example.story}`;
-    storyEl.hidden = false;
+    storyEl.innerHTML = `<p class="why-label">${example.title}</p><p>${example.story}</p>`;
+    $('#example-chip-name').textContent = `Example ${example.id.replace(/\D/g, '')}`;
+    $('#example-chip').hidden = false;
     whyEl.innerHTML = example.whyLines
       .map(([head, text]) => `<p><strong>${head}.</strong> ${text.charAt(0).toUpperCase()}${text.slice(1)}</p>`).join('');
     whyEl.hidden = false;
   } else {
-    storyEl.hidden = true;
+    $('#example-chip').hidden = true;
     whyEl.hidden = true;
   }
   whyDetails.hidden = whyEl.hidden;
@@ -514,6 +553,8 @@ function normalized(inputs) {
 }
 
 function render() {
+  if (!ready()) return;
+  if (popBtn && !document.contains(popBtn)) hidePop();
   const result = computePlan({ scenario: scenario.id, inputs: currentInputs });
   writeState(scenario, { inputs: currentInputs, path: currentPath, exampleId: currentExampleId });
   renderExampleChrome();
@@ -521,10 +562,10 @@ function render() {
   const sum = formEl.querySelector('.group-conventions .group-sum');
   if (sum) sum.textContent = conventionsSummary(currentInputs);
   if (!result.ok) {
-    resultsEl.innerHTML = '<h2 id="results-h" class="headline headline-waiting">Answer the questions to see the numbers.</h2>' +
-      '<ul class="problems">' + result.problems
-        .map((p) => `<li class="problem">${esc(p.replace(/^[A-Za-z]+: /, ''))}</li>`).join('') + '</ul>' +
-      '<p class="note">Nothing is calculated until the questions make sense.</p>';
+    resultsEl.innerHTML = '<p class="headline headline-waiting">Your sample size appears here once the details are filled in.</p>' +
+      '<p class="note">Still needed:</p><ul class="problems">' + result.problems
+        .map((p) => { const t = p.replace(/^[A-Za-z]+: /, ''); return `<li class="problem">${esc(t.charAt(0).toUpperCase() + t.slice(1))}</li>`; }).join('') + '</ul>';
+    setActions(false);
     budgetEl.innerHTML = '';
     curveEl.innerHTML = '';
     guardrailsEl.innerHTML = '';
@@ -532,7 +573,9 @@ function render() {
     jumpEl.textContent = 'Some questions still need an answer. See what is missing';
     return;
   }
+  setActions(true);
   renderResults(result);
+  if (popBtn && !document.contains(popBtn)) hidePop();
   placeAnswer();
   budgetExplorer(budgetEl, { inputs: currentInputs, result });
   verdictCurve(curveEl, { inputs: currentInputs, result });
@@ -544,15 +587,149 @@ function render() {
   justifyEl.textContent = result.justification;
 }
 
+function chosenExperiment() {
+  return EXPERIMENTS.find((e) => e.outcome === currentInputs.outcome && e.assignment === currentInputs.assignment) ?? null;
+}
+
+function renderPicker() {
+  const chosen = chosenExperiment();
+  if (pickerEl.dataset.built) {
+    pickerEl.querySelectorAll('input[name="experiment"]').forEach((r) => { r.checked = r.value === pending.exp; });
+    return;
+  }
+  const rows = EXPERIMENTS.map((e) => `<div class="exp-row"><label class="exp">
+      <input type="radio" name="experiment" value="${e.id}"${pending.exp === e.id ? ' checked' : ''}>
+      <span class="exp-body"><span class="exp-title">${e.title}</span><span class="exp-tests">${e.tests}</span></span>
+    </label><button type="button" class="info exp-info" data-pop="pop-exp-${e.id}" aria-controls="whyn-pop" aria-expanded="false" aria-label="An example: ${e.title}">i</button></div>` +
+    `<div id="pop-exp-${e.id}" class="pop-src" hidden><p class="why-label">${e.title}</p><p>For example: ${e.example}</p><p>${e.pickIf}</p><p class="exp-tests">Known as: ${e.tests}.</p></div>`).join('');
+  const later = LATER.map((e) => `<li><span class="exp-title">${e.title}</span> <span class="exp-tests">(${e.tests}).</span> ${TOOLS[e.tool]}.</li>`).join('');
+  pickerEl.innerHTML = `<fieldset class="exp-list"><legend class="visually-hidden">What does your experiment compare?</legend>${rows}</fieldset>` +
+    '<p class="later-line">Not in WhyN yet: ANOVA, correlation, larger chi-square tables, survival, clusters. ' +
+    '<button type="button" class="info" data-pop="later-list" aria-controls="whyn-pop" aria-expanded="false" aria-label="Designs WhyN does not size yet">i</button></p>' +
+    `<div id="later-list" class="pop-src pop-wide" hidden><p class="why-label">Not in WhyN yet</p><p>WhyN sizes the four designs above. Sizing one of these with them would give the wrong number, so use another tool for now:</p><ul>${later}</ul></div>`;
+  pickerEl.dataset.built = '1';
+}
+
+// Steps 1 and 2 are held as pending choices until Continue (or Apply
+// changes) is pressed, so nothing else on the page reacts while a
+// person is still deciding.
+const pending = { path: null, exp: null };
+const applyBtn = $('#apply-choices');
+const applyNote = $('#apply-note');
+function syncPending() {
+  pending.path = currentPath;
+  pending.exp = chosenExperiment()?.id ?? null;
+  document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === pending.path; });
+}
+function updateApply() {
+  const complete = Boolean(pending.path && pending.exp);
+  const applied = ready();
+  const same = applied && pending.path === currentPath && pending.exp === chosenExperiment()?.id;
+  applyBtn.textContent = applied ? 'Apply changes' : 'Continue';
+  applyBtn.disabled = !complete || same;
+  applyNote.textContent = applied && !same && complete
+    ? 'Below still shows your earlier choice.'
+    : (!complete && (pending.path || pending.exp) ? 'Answer both questions to continue.' : '');
+}
+function applyChoices() {
+  if (!pending.path || !pending.exp) return;
+  if (pending.path !== currentPath) {
+    // The worked examples name an engine-level deltaSource. The
+    // questions replace it — the check path asks the Δ-source
+    // question itself — so a path switch drops it rather than
+    // letting it answer that question silently (Addendum 2).
+    delete currentInputs.deltaSource;
+    if (pending.path === 'plan') {
+      // The check-only questions belong to the check path; leaving
+      // their answers in place would check a size the planning path
+      // never asked about.
+      for (const q of scenario.questions) {
+        if (q.paths && !q.paths.includes('plan')) currentInputs[q.key] = q.default;
+      }
+    }
+  }
+  currentPath = pending.path;
+  const e = EXPERIMENTS.find((x) => x.id === pending.exp);
+  currentInputs.outcome = e.outcome;
+  currentInputs.assignment = e.assignment;
+  const claimQ = scenario.questions.find((q) => q.key === 'claim');
+  if (!applies(claimQ, currentInputs)) currentInputs.claim = null;
+  renderAll();
+  const first = formEl.querySelector('input:not([type=radio]), input');
+  first?.focus({ preventScroll: true });
+  const top = $('#step-details').getBoundingClientRect?.().top ?? 0;
+  if (top > (window.innerHeight || 0) - 120) {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    $('#step-details').scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
+}
+
+function setActions(on) {
+  $('#copy-justification').disabled = !on;
+  $('#show-justification').disabled = !on;
+}
+
+function ready() {
+  return Boolean(currentPath && chosenExperiment());
+}
+
+// Show only the steps that apply: the start is two questions, the
+// details and the answer appear once both are answered.
+function renderAll() {
+  hidePop();
+  renderPicker();
+  const r = ready();
+  $('#details-placeholder').hidden = r;
+  formEl.hidden = !r;
+  startOverBtn.disabled = !(currentPath || currentInputs.outcome || currentInputs.assignment || pending.path || pending.exp);
+  if (r) {
+    buildForm();
+    render();
+  } else {
+    formEl.innerHTML = '';
+    resultsEl.innerHTML = '<p class="headline headline-waiting">Your sample size will appear here.</p>' +
+      '<p class="note">Answer steps 1 and 2, then the details. Every number comes with its reason, one click away.</p>';
+    guardrailsEl.innerHTML = '';
+    justifyEl.textContent = '';
+    budgetEl.innerHTML = '';
+    curveEl.innerHTML = '';
+    setActions(false);
+    renderExampleChrome();
+    jumpEl.hidden = true;
+    jumpEl.textContent = '';
+  }
+  updateApply();
+  syncJump();
+}
+
+function startOver() {
+  currentInputs = { ...scenario.defaults() };
+  currentPath = null;
+  currentExampleId = null;
+  pending.path = null;
+  pending.exp = null;
+  document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = false; });
+  history.replaceState(null, '', location.pathname);
+  renderAll();
+}
+
+pickerEl.addEventListener('change', (event) => {
+  if (event.target.name !== 'experiment') return;
+  pending.exp = event.target.value;
+  startOverBtn.disabled = false;
+  updateApply();
+});
+applyBtn.addEventListener('click', applyChoices);
+startOverBtn.addEventListener('click', startOver);
+
 function loadExample(id) {
   const example = EXAMPLES.find((e) => e.id === id);
   if (!example) return;
   currentExampleId = id;
   currentPath = example.path;
   currentInputs = { ...scenario.defaults(), ...example.inputs };
-  document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === currentPath; });
-  buildForm();
-  render();
+  syncPending();
+  renderAll();
   const menu = $('#example-menu');
   if (menu) menu.open = false;
 }
@@ -579,39 +756,92 @@ formEl.addEventListener('change', (event) => {
   render();
 });
 
-// Info buttons, in the form and in the answer: open or close the
-// explanation they control.
+// Tooltips. One floating panel serves every info button: it opens
+// over the page, below the button (above it when there is no room),
+// and moves nothing. A mouse shows it on hover; a click or tap keeps
+// it open; Esc, a click elsewhere, or the button again closes it.
+const popEl = $('#whyn-pop');
+let popBtn = null;
+let popPinned = false;
+let hoverTimer = null;
+const canHover = typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+function placePop(btn) {
+  const r = btn.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth || window.innerWidth || 1024;
+  const vh = window.innerHeight || 800;
+  const w = Math.min(popEl.classList.contains('pop-wide') ? 560 : 360, vw - 24);
+  popEl.style.width = `${w}px`;
+  const left = Math.max(12, Math.min(r.left - 12, vw - w - 12));
+  const h = popEl.offsetHeight;
+  const below = r.bottom + 8;
+  const top = below + h > vh - 12 && r.top - h - 8 > 12 ? r.top - h - 8 : below;
+  popEl.style.left = `${left + window.scrollX}px`;
+  popEl.style.top = `${top + window.scrollY}px`;
+}
+function showPop(btn, pinned) {
+  const src = document.getElementById(btn.dataset.pop);
+  if (!src) return;
+  if (popBtn && popBtn !== btn) popBtn.setAttribute('aria-expanded', 'false');
+  popEl.innerHTML = src.innerHTML;
+  popEl.classList.toggle('pop-wide', src.classList.contains('pop-wide'));
+  popEl.hidden = false;
+  placePop(btn);
+  popBtn = btn;
+  popPinned = pinned;
+  btn.setAttribute('aria-expanded', 'true');
+}
+function hidePop() {
+  clearTimeout(hoverTimer);
+  if (!popEl || popEl.hidden) return;
+  popEl.hidden = true;
+  popEl.innerHTML = '';
+  if (popBtn) popBtn.setAttribute('aria-expanded', 'false');
+  popBtn = null;
+  popPinned = false;
+}
 document.addEventListener('click', (event) => {
-  const btn = event.target.closest('button.info[data-hint]');
-  if (!btn) return;
-  const key = btn.dataset.hint;
-  const target = document.getElementById(btn.getAttribute('aria-controls'));
-  if (!target) return;
-  const open = target.hidden;
-  target.hidden = !open;
-  btn.setAttribute('aria-expanded', String(open));
-  if (open) openHints.add(key); else openHints.delete(key);
-  placeAnswer();
+  const btn = event.target.closest('button.info[data-pop]');
+  if (btn) {
+    if (popBtn === btn && popPinned) hidePop();
+    else showPop(btn, true);
+    return;
+  }
+  if (!popEl.hidden && !popEl.contains(event.target)) hidePop();
 });
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && popBtn) {
+    const btn = popBtn;
+    hidePop();
+    btn.focus();
+  }
+});
+if (canHover) {
+  document.addEventListener('mouseover', (event) => {
+    const btn = event.target.closest?.('button.info[data-pop]');
+    if (btn && !popPinned) {
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => showPop(btn, false), 120);
+    } else if (popEl.contains(event.target)) {
+      clearTimeout(hoverTimer);
+    }
+  });
+  document.addEventListener('mouseout', (event) => {
+    const leaving = event.target.closest?.('button.info[data-pop]') || popEl.contains(event.target);
+    const to = event.relatedTarget;
+    if (!leaving || popPinned) return;
+    if (to && (popEl.contains(to) || to.closest?.('button.info[data-pop]') === popBtn)) return;
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => { if (!popPinned) hidePop(); }, 150);
+  });
+}
+window.addEventListener('resize', () => { if (popBtn) placePop(popBtn); });
 
 document.querySelectorAll('input[name="path"]').forEach((r) => {
   r.addEventListener('change', () => {
-    currentPath = r.value;
-    // The worked examples name an engine-level deltaSource. The
-    // questions replace it — the check path asks the Δ-source
-    // question itself — so a hand path switch drops it rather than
-    // letting it answer that question silently (Addendum 2).
-    delete currentInputs.deltaSource;
-    if (currentPath === 'plan') {
-      // The check-only questions belong to the check path; leaving
-      // their answers in place would check a size the planning path
-      // never asked about.
-      for (const q of scenario.questions) {
-        if (q.paths && !q.paths.includes('plan')) currentInputs[q.key] = q.default;
-      }
-    }
-    buildForm();
-    render();
+    pending.path = r.value;
+    startOverBtn.disabled = false;
+    updateApply();
   });
 });
 
@@ -649,17 +879,19 @@ $('#observed-power').addEventListener('click', () => {
   note.hidden = false;
 });
 
+let syncJump = () => {};
 // On a phone the answer sits below the form; a small bar keeps the
 // answer's first line in reach until the answer itself is on screen.
 if (typeof window.IntersectionObserver === 'function' && window.matchMedia) {
   const narrow = window.matchMedia('(max-width: 59.99rem)');
   let answerVisible = false;
-  const sync = () => { jumpEl.hidden = !narrow.matches || answerVisible; };
+  const sync = () => { jumpEl.hidden = !narrow.matches || answerVisible || !ready() || !jumpEl.textContent; };
   new IntersectionObserver((entries) => {
     answerVisible = entries.some((e) => e.isIntersecting);
     sync();
   }).observe(resultsEl);
   narrow.addEventListener?.('change', sync);
+  syncJump = sync;
   sync();
 }
 
@@ -669,16 +901,13 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(render, 150);
 });
 
-// Start: a shared link wins; otherwise open on the plain check
-// (decision log #8): an AI-given size in the plainest design.
+// Start: a shared link opens on its answer; otherwise the page asks
+// two questions first (decision log #10).
 const fromUrl = readState(scenario);
 if (fromUrl) {
   currentInputs = { ...scenario.defaults(), ...fromUrl.inputs };
   currentPath = fromUrl.path;
   currentExampleId = fromUrl.exampleId;
-  document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === currentPath; });
-  buildForm();
-  render();
-} else {
-  loadExample('ex4');
+  syncPending();
 }
+renderAll();
