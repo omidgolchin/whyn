@@ -57,32 +57,45 @@ if (JSDOM) {
   const text = (sel) => window.document.querySelector(sel)?.textContent ?? '';
   const results = () => text('#results');
 
-  // The start (decision log #10): two questions, nothing else. No
-  // answer panel, no details and no numbers until both are answered.
+  // The start (decision log #10, steadied by #15): the frame is fixed
+  // from the first visit. Steps 1-3 and the answer panel are all in
+  // place; the panel says what will appear, step 3 holds a one-line
+  // placeholder, and no numbers show until both questions are answered.
   const doc = window.document;
-  check(doc.querySelector('#answer').hidden, 'start: the answer panel waits for the first two answers');
-  check(doc.querySelector('#step-details').hidden, 'start: the details wait for the first two answers');
+  const box = (sel) => { const e = doc.querySelector(sel); return e && !e.hidden && !e.closest('[hidden]'); };
+  check(box('#answer') && text('#answer-h') === 'Your answer', 'start: the answer panel is in place and says what it is');
+  check(results().includes('will appear here'), 'start: the panel says what will appear in it');
+  check(box('#step-details') && box('#details-placeholder'), 'start: step 3 is in place, with a placeholder');
   check(doc.querySelectorAll('#experiment-picker input[name="experiment"]').length === 4, 'start: four experiments to pick from');
   check(text('#experiment-picker').includes('chi-square') && text('#experiment-picker').includes('t-test'), 'start: the picker names the tests people know');
   check(text('#experiment-picker').includes('ANOVA') && text('#experiment-picker').includes('correlation'), 'start: the designs not covered yet are named');
   check(!results().includes('units'), 'start: no numbers before the questions');
+  check(doc.querySelector('#copy-justification').disabled && doc.querySelector('#start-over').disabled, 'start: buttons wait, greyed out, rather than appearing later');
 
-  // Answering both opens the details and a waiting answer panel.
   const pick = (name, value) => {
     const r = doc.querySelector(`input[name="${name}"][value="${value}"]`);
     r.checked = true;
     r.dispatchEvent(new window.Event('change', { bubbles: true }));
   };
   pick('path', 'plan');
-  check(doc.querySelector('#answer').hidden, 'start: one answer is not enough');
+  check(!results().includes('Still needed') && box('#details-placeholder'), 'start: one answer is not enough');
   pick('experiment', 'mean-independent');
-  check(!doc.querySelector('#step-details').hidden && !doc.querySelector('#answer').hidden, 'start: both answers open the details and the answer panel');
-  check(text('#answer-h') === 'Your answer', 'the answer panel says what it is');
+  check(!box('#details-placeholder') && doc.querySelector('#q-delta'), 'both answers fill step 3 in place');
   check(results().includes('Still needed'), 'the answer panel names what is still needed');
-  check(text('#experiment-picker').includes('Two-sample t-test') && doc.querySelector('#change-experiment'), 'the chosen experiment folds to one line with a way back');
-  check(!doc.querySelector('#q-outcome') && !doc.querySelector('input[name="outcome"]'), 'the details do not ask again what step 2 answered');
+  check(doc.querySelectorAll('#experiment-picker input[name="experiment"]').length === 4 &&
+    doc.querySelector('input[name="experiment"][value="mean-independent"]').checked, 'the picker stays as it was, with the choice marked');
+  check(!doc.querySelector('input[name="outcome"]'), 'the details do not ask again what step 2 answered');
+
+  // Explanations open in one floating tooltip and move nothing.
+  const deltaInfo = doc.querySelector('button.info[data-pop="hint-delta"]');
+  deltaInfo.click();
+  const pop = doc.querySelector('#whyn-pop');
+  check(!pop.hidden && pop.textContent.length > 20 && deltaInfo.getAttribute('aria-expanded') === 'true', 'an info button opens the tooltip');
+  doc.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+  check(pop.hidden && deltaInfo.getAttribute('aria-expanded') === 'false', 'Esc closes the tooltip');
+
   doc.querySelector('#start-over').click();
-  check(doc.querySelector('#answer').hidden && !doc.querySelector('input[name="path"]:checked'), 'start over returns to the two questions');
+  check(!doc.querySelector('input[name="path"]:checked') && box('#details-placeholder') && results().includes('will appear here'), 'start over returns to the first visit');
 
   // Q14 (decision log #10 moved it behind the first example): the
   // plain check, an AI-given 300 students per group for a 4-point
@@ -91,7 +104,7 @@ if (JSDOM) {
   check(results().includes('4,906 units'), 'Q14: opens on the plain check: required total 4,906');
   check(results().includes('11.44 points'), 'Q14: MDE 11.44 points at the given size');
   check(results().includes('16.4%'), 'Q14: verdict chance 16.4% at delta');
-  check(!window.document.querySelector('#example-story').hidden, 'Q14: the plain check story is visible');
+  check(!window.document.querySelector('#example-chip').hidden && text('#example-story').includes('300 per group'), 'Q14: the example is named, with its story one click away');
   check(text('#justification-text').includes('600 units'), 'Q14: justification mentions the given 600 units');
   check(results().includes('Assumed:'), 'Q4: the assumption line is shown under the numbers');
   check(results().includes("base rate 50% (you didn't know it)"), 'Q4: an unknown base rate is named as an assumption');

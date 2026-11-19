@@ -143,9 +143,8 @@ main { max-width: 76rem; margin: 0 auto; padding: 0 1.25rem 2rem; }
   gap: 1.5rem;
   margin-top: 1rem;
 }
-.workspace.is-start { max-width: 44rem; }
 @media (min-width: 60rem) {
-  .workspace:not(.is-start) { grid-template-columns: minmax(0, 27rem) minmax(0, 1fr); gap: 2.5rem; align-items: start; }
+  .workspace { grid-template-columns: minmax(0, 28rem) minmax(0, 1fr); gap: 2.5rem; align-items: start; }
   .answer { position: sticky; top: 1rem; }
 }
 
@@ -201,6 +200,22 @@ main { max-width: 76rem; margin: 0 auto; padding: 0 1.25rem 2rem; }
 .exp input:focus-visible + .exp-body { outline: 3px solid var(--accent); outline-offset: 2px; }
 .exp-title { font-weight: 600; }
 .exp-tests { color: var(--muted); font-size: 0.92rem; }
+.step-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-height: 1.9rem; margin-bottom: 0.75rem; }
+.step-head .step-title { margin: 0; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.3rem 0.15rem 0.7rem;
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.placeholder { margin: 0; padding: 0.85rem 1rem; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); font-size: 0.94rem; }
+.later-line { margin: 0.75rem 0 0; font-size: 0.92rem; color: var(--muted); }
+.later-line .info, .chip .info { display: inline-block; vertical-align: -0.2em; margin-left: 0.25rem; }
 .exp-chosen {
   display: flex;
   align-items: center;
@@ -336,15 +351,27 @@ button.small { padding: 0.3rem 0.8rem; font-size: 0.9rem; }
 .info:hover { border-color: var(--accent); }
 .info[aria-expanded="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .info:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.hint {
-  margin: 0.45rem 0 0;
-  padding: 0.55rem 0.75rem;
-  font-size: 0.9rem;
+
+/* The one floating tooltip. It sits over the page and moves nothing. */
+.pop {
+  position: absolute;
+  z-index: 20;
+  max-width: calc(100vw - 24px);
+  padding: 0.75rem 0.9rem;
+  background: var(--paper);
   color: var(--ink);
-  background: var(--wash);
-  border-radius: 8px;
-  max-width: 40rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(20, 30, 60, 0.18);
+  font-size: 0.92rem;
+  line-height: 1.45;
 }
+.pop p { margin: 0 0 0.5rem; }
+.pop p:last-child, .pop ul:last-child { margin-bottom: 0; }
+.pop ul { margin: 0.25rem 0 0; padding-left: 1.1rem; }
+.pop li { margin: 0.3rem 0; }
+.pop .why-label { font-weight: 600; }
+.pop .table-wrap { margin: 0.5rem 0; }
 
 /* ---------- The answer ---------- */
 
@@ -416,10 +443,6 @@ button.small { padding: 0.3rem 0.8rem; font-size: 0.9rem; }
 }
 .number .sub { font-family: var(--sans); font-size: 0.95rem; font-weight: 400; color: var(--muted); }
 .number .keep { margin: 0.3rem 0 0; font-size: 0.92rem; max-width: 40rem; }
-.whys .why { margin-top: 0.75rem; padding: 0.75rem 0.9rem; background: var(--paper); border-radius: 8px; font-size: 0.92rem; }
-.whys .why p { margin: 0 0 0.5rem; max-width: 42rem; }
-.whys .why p:last-child { margin-bottom: 0; }
-.whys .why-label { font-weight: 600; }
 
 .assumed { margin: 0.75rem 0 0; font-size: 0.86rem; color: var(--muted); }
 
@@ -451,6 +474,7 @@ button.primary, button.quiet, #observed-power, .budget-controls button {
 button.primary { background: var(--accent); color: var(--accent-ink); }
 button.quiet, #observed-power { background: transparent; color: var(--accent); }
 button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ---------- More detail ---------- */
 

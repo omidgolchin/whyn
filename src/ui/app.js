@@ -89,10 +89,8 @@ function stepFor(key, inputs) {
 
 let currentInputs = { ...scenario.defaults() };
 let currentPath = null;
-let pickerOpen = true;
 let currentExampleId = null;
 let conventionsOpen = false;
-const openHints = new Set();
 
 const formEl = $('#questions');
 const resultsEl = $('#results');
@@ -104,11 +102,7 @@ const storyEl = $('#example-story');
 const whyEl = $('#example-why');
 const whyDetails = $('#why-details');
 const jumpEl = $('#answer-jump');
-const flowEl = $('#flow');
 const pickerEl = $('#experiment-picker');
-const detailsEl = $('#step-details');
-const answerBox = $('#answer');
-const moreEl = $('#more');
 const startOverBtn = $('#start-over');
 
 function applies(question, inputs) {
@@ -129,26 +123,27 @@ function shown(q) {
   return applies(q, currentInputs);
 }
 
-// An info button and the explanation it opens. The explanation stays
-// in the page (closed) so it can be found, read aloud and copied.
+// An info button and the explanation it opens. The explanation lives
+// in the page as a hidden source (so it can be found and tested); the
+// button shows a copy in one floating tooltip that sits over the page
+// and moves nothing (see "Tooltips" below).
 function infoButton(key, label) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'info';
   btn.setAttribute('aria-label', `What does “${label}” mean?`);
-  btn.setAttribute('aria-controls', `hint-${key}`);
-  const open = openHints.has(key);
-  btn.setAttribute('aria-expanded', String(open));
+  btn.setAttribute('aria-controls', 'whyn-pop');
+  btn.setAttribute('aria-expanded', 'false');
   btn.textContent = 'i';
-  btn.dataset.hint = key;
+  btn.dataset.pop = `hint-${key}`;
   return btn;
 }
 function hintPara(key, text) {
-  const p = document.createElement('p');
-  p.className = 'hint';
+  const p = document.createElement('div');
+  p.className = 'pop-src';
   p.id = `hint-${key}`;
   p.textContent = text;
-  p.hidden = !openHints.has(key);
+  p.hidden = true;
   return p;
 }
 
@@ -407,16 +402,14 @@ function intervalRuler(result) {
 // One figure: a label, a value, an info button, and its reason. The
 // reason stays in the page, closed until asked for.
 function figure(key, label, value, { visible = '' } = {}) {
-  const open = openHints.has(`fig-${key}`);
   return `<div class="number" data-figure="${key}">
     <div class="number-head"><span class="number-label">${label}</span>` +
-    `<button type="button" class="info" data-hint="fig-${key}" aria-controls="hint-fig-${key}" aria-expanded="${open}" aria-label="Why: ${esc(label)}">i</button></div>
+    `<button type="button" class="info" data-pop="hint-fig-${key}" aria-controls="whyn-pop" aria-expanded="false" aria-label="Why: ${esc(label)}">i</button></div>
     <p class="big">${value}</p>${visible ? `<p class="keep">${visible}</p>` : ''}
   </div>`;
 }
 function figureWhy(key, label, why, extra = '') {
-  const open = openHints.has(`fig-${key}`);
-  return `<div class="why" id="hint-fig-${key}"${open ? '' : ' hidden'}><p class="why-label">${label}</p><p>${why}</p>${extra}</div>`;
+  return `<div class="pop-src${extra ? ' pop-wide' : ''}" id="hint-fig-${key}" hidden><p class="why-label">${label}</p><p>${why}</p>${extra}</div>`;
 }
 
 function renderResults(result) {
@@ -503,7 +496,7 @@ function renderResults(result) {
   parts.push(figure('interval', 'Interval level', `${fmtNum(100 * result.intervalLevel)}% <span class="sub">per claim</span>`));
   whys.push(figureWhy('interval', 'Interval level', why3));
   parts.push('</div>');
-  parts.push(`<div class="whys">${whys.join('')}</div>`);
+  parts.push(`<div class="whys" hidden>${whys.join('')}</div>`);
 
   // The values the page assumed, named as assumptions.
   if (typeof scenario.assumptionLine === 'function') {
@@ -529,13 +522,14 @@ function renderExampleChrome() {
   const example = EXAMPLES.find((e) => e.id === currentExampleId);
   const matches = example && JSON.stringify(normalized(currentInputs)) === JSON.stringify(normalized(example.inputs));
   if (example && matches) {
-    storyEl.innerHTML = `<strong>${example.title}.</strong> ${example.story}`;
-    storyEl.hidden = false;
+    storyEl.innerHTML = `<p class="why-label">${example.title}</p><p>${example.story}</p>`;
+    $('#example-chip-name').textContent = `Example ${example.id.replace(/\D/g, '')}`;
+    $('#example-chip').hidden = false;
     whyEl.innerHTML = example.whyLines
       .map(([head, text]) => `<p><strong>${head}.</strong> ${text.charAt(0).toUpperCase()}${text.slice(1)}</p>`).join('');
     whyEl.hidden = false;
   } else {
-    storyEl.hidden = true;
+    $('#example-chip').hidden = true;
     whyEl.hidden = true;
   }
   whyDetails.hidden = whyEl.hidden;
@@ -552,6 +546,7 @@ function normalized(inputs) {
 
 function render() {
   if (!ready()) return;
+  if (popBtn && !document.contains(popBtn)) hidePop();
   const result = computePlan({ scenario: scenario.id, inputs: currentInputs });
   writeState(scenario, { inputs: currentInputs, path: currentPath, exampleId: currentExampleId });
   renderExampleChrome();
@@ -562,7 +557,7 @@ function render() {
     resultsEl.innerHTML = '<p class="headline headline-waiting">Your sample size appears here once the details are filled in.</p>' +
       '<p class="note">Still needed:</p><ul class="problems">' + result.problems
         .map((p) => { const t = p.replace(/^[A-Za-z]+: /, ''); return `<li class="problem">${esc(t.charAt(0).toUpperCase() + t.slice(1))}</li>`; }).join('') + '</ul>';
-    $('#answer-actions').hidden = true;
+    setActions(false);
     budgetEl.innerHTML = '';
     curveEl.innerHTML = '';
     guardrailsEl.innerHTML = '';
@@ -570,8 +565,9 @@ function render() {
     jumpEl.textContent = 'Some questions still need an answer. See what is missing';
     return;
   }
-  $('#answer-actions').hidden = false;
+  setActions(true);
   renderResults(result);
+  if (popBtn && !document.contains(popBtn)) hidePop();
   placeAnswer();
   budgetExplorer(budgetEl, { inputs: currentInputs, result });
   verdictCurve(curveEl, { inputs: currentInputs, result });
@@ -589,10 +585,8 @@ function chosenExperiment() {
 
 function renderPicker() {
   const chosen = chosenExperiment();
-  if (chosen && !pickerOpen) {
-    pickerEl.innerHTML = `<div class="exp-chosen"><div><p class="exp-title">${chosen.title}</p>` +
-      `<p class="exp-tests">${chosen.tests}</p></div>` +
-      '<button type="button" class="quiet small" id="change-experiment">Change</button></div>';
+  if (pickerEl.dataset.built) {
+    pickerEl.querySelectorAll('input[name="experiment"]').forEach((r) => { r.checked = Boolean(chosen && r.value === chosen.id); });
     return;
   }
   const rows = EXPERIMENTS.map((e) => `<label class="exp">
@@ -601,8 +595,15 @@ function renderPicker() {
     </label>`).join('');
   const later = LATER.map((e) => `<li><span class="exp-title">${e.title}</span> <span class="exp-tests">(${e.tests}).</span> ${TOOLS[e.tool]}.</li>`).join('');
   pickerEl.innerHTML = `<fieldset class="exp-list"><legend class="visually-hidden">What does your experiment compare?</legend>${rows}</fieldset>` +
-    `<details class="later"><summary>Not in WhyN yet: ANOVA, correlation, larger chi-square tables, survival, clusters</summary>` +
-    `<p>WhyN sizes the four designs above. Sizing one of these with them would give the wrong number, so use another tool for now:</p><ul>${later}</ul></details>`;
+    '<p class="later-line">Not in WhyN yet: ANOVA, correlation, larger chi-square tables, survival, clusters. ' +
+    '<button type="button" class="info" data-pop="later-list" aria-controls="whyn-pop" aria-expanded="false" aria-label="Designs WhyN does not size yet">i</button></p>' +
+    `<div id="later-list" class="pop-src pop-wide" hidden><p class="why-label">Not in WhyN yet</p><p>WhyN sizes the four designs above. Sizing one of these with them would give the wrong number, so use another tool for now:</p><ul>${later}</ul></div>`;
+  pickerEl.dataset.built = '1';
+}
+
+function setActions(on) {
+  $('#copy-justification').disabled = !on;
+  $('#show-justification').disabled = !on;
 }
 
 function ready() {
@@ -612,17 +613,25 @@ function ready() {
 // Show only the steps that apply: the start is two questions, the
 // details and the answer appear once both are answered.
 function renderAll() {
+  hidePop();
   renderPicker();
   const r = ready();
-  flowEl.classList.toggle('is-start', !r);
-  detailsEl.hidden = !r;
-  answerBox.hidden = !r;
-  moreEl.hidden = !r;
-  startOverBtn.hidden = !(currentPath || currentInputs.outcome || currentInputs.assignment);
+  $('#details-placeholder').hidden = r;
+  formEl.hidden = !r;
+  startOverBtn.disabled = !(currentPath || currentInputs.outcome || currentInputs.assignment);
   if (r) {
     buildForm();
     render();
   } else {
+    formEl.innerHTML = '';
+    resultsEl.innerHTML = '<p class="headline headline-waiting">Your sample size will appear here.</p>' +
+      '<p class="note">Answer steps 1 and 2, then the details. Every number comes with its reason, one click away.</p>';
+    guardrailsEl.innerHTML = '';
+    justifyEl.textContent = '';
+    budgetEl.innerHTML = '';
+    curveEl.innerHTML = '';
+    setActions(false);
+    renderExampleChrome();
     jumpEl.hidden = true;
     jumpEl.textContent = '';
   }
@@ -633,10 +642,8 @@ function startOver() {
   currentInputs = { ...scenario.defaults() };
   currentPath = null;
   currentExampleId = null;
-  pickerOpen = true;
   document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = false; });
   history.replaceState(null, '', location.pathname);
-  storyEl.hidden = true;
   renderAll();
 }
 
@@ -647,15 +654,7 @@ pickerEl.addEventListener('change', (event) => {
   currentInputs.assignment = e.assignment;
   const claimQ = scenario.questions.find((q) => q.key === 'claim');
   if (!applies(claimQ, currentInputs)) currentInputs.claim = null;
-  if (currentPath) pickerOpen = false;
   renderAll();
-  if (!detailsEl.hidden) detailsEl.querySelector('input')?.focus({ preventScroll: true });
-});
-pickerEl.addEventListener('click', (event) => {
-  if (event.target.id !== 'change-experiment') return;
-  pickerOpen = true;
-  renderPicker();
-  pickerEl.querySelector('input[name="experiment"]:checked')?.focus();
 });
 startOverBtn.addEventListener('click', startOver);
 
@@ -665,7 +664,6 @@ function loadExample(id) {
   currentExampleId = id;
   currentPath = example.path;
   currentInputs = { ...scenario.defaults(), ...example.inputs };
-  pickerOpen = false;
   document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === currentPath; });
   renderAll();
   const menu = $('#example-menu');
@@ -694,20 +692,86 @@ formEl.addEventListener('change', (event) => {
   render();
 });
 
-// Info buttons, in the form and in the answer: open or close the
-// explanation they control.
+// Tooltips. One floating panel serves every info button: it opens
+// over the page, below the button (above it when there is no room),
+// and moves nothing. A mouse shows it on hover; a click or tap keeps
+// it open; Esc, a click elsewhere, or the button again closes it.
+const popEl = $('#whyn-pop');
+let popBtn = null;
+let popPinned = false;
+let hoverTimer = null;
+const canHover = typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+function placePop(btn) {
+  const r = btn.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth || window.innerWidth || 1024;
+  const vh = window.innerHeight || 800;
+  const w = Math.min(popEl.classList.contains('pop-wide') ? 560 : 360, vw - 24);
+  popEl.style.width = `${w}px`;
+  const left = Math.max(12, Math.min(r.left - 12, vw - w - 12));
+  const h = popEl.offsetHeight;
+  const below = r.bottom + 8;
+  const top = below + h > vh - 12 && r.top - h - 8 > 12 ? r.top - h - 8 : below;
+  popEl.style.left = `${left + window.scrollX}px`;
+  popEl.style.top = `${top + window.scrollY}px`;
+}
+function showPop(btn, pinned) {
+  const src = document.getElementById(btn.dataset.pop);
+  if (!src) return;
+  if (popBtn && popBtn !== btn) popBtn.setAttribute('aria-expanded', 'false');
+  popEl.innerHTML = src.innerHTML;
+  popEl.classList.toggle('pop-wide', src.classList.contains('pop-wide'));
+  popEl.hidden = false;
+  placePop(btn);
+  popBtn = btn;
+  popPinned = pinned;
+  btn.setAttribute('aria-expanded', 'true');
+}
+function hidePop() {
+  clearTimeout(hoverTimer);
+  if (!popEl || popEl.hidden) return;
+  popEl.hidden = true;
+  popEl.innerHTML = '';
+  if (popBtn) popBtn.setAttribute('aria-expanded', 'false');
+  popBtn = null;
+  popPinned = false;
+}
 document.addEventListener('click', (event) => {
-  const btn = event.target.closest('button.info[data-hint]');
-  if (!btn) return;
-  const key = btn.dataset.hint;
-  const target = document.getElementById(btn.getAttribute('aria-controls'));
-  if (!target) return;
-  const open = target.hidden;
-  target.hidden = !open;
-  btn.setAttribute('aria-expanded', String(open));
-  if (open) openHints.add(key); else openHints.delete(key);
-  placeAnswer();
+  const btn = event.target.closest('button.info[data-pop]');
+  if (btn) {
+    if (popBtn === btn && popPinned) hidePop();
+    else showPop(btn, true);
+    return;
+  }
+  if (!popEl.hidden && !popEl.contains(event.target)) hidePop();
 });
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && popBtn) {
+    const btn = popBtn;
+    hidePop();
+    btn.focus();
+  }
+});
+if (canHover) {
+  document.addEventListener('mouseover', (event) => {
+    const btn = event.target.closest?.('button.info[data-pop]');
+    if (btn && !popPinned) {
+      clearTimeout(hoverTimer);
+      hoverTimer = setTimeout(() => showPop(btn, false), 120);
+    } else if (popEl.contains(event.target)) {
+      clearTimeout(hoverTimer);
+    }
+  });
+  document.addEventListener('mouseout', (event) => {
+    const leaving = event.target.closest?.('button.info[data-pop]') || popEl.contains(event.target);
+    const to = event.relatedTarget;
+    if (!leaving || popPinned) return;
+    if (to && (popEl.contains(to) || to.closest?.('button.info[data-pop]') === popBtn)) return;
+    clearTimeout(hoverTimer);
+    hoverTimer = setTimeout(() => { if (!popPinned) hidePop(); }, 150);
+  });
+}
+window.addEventListener('resize', () => { if (popBtn) placePop(popBtn); });
 
 document.querySelectorAll('input[name="path"]').forEach((r) => {
   r.addEventListener('change', () => {
@@ -725,7 +789,6 @@ document.querySelectorAll('input[name="path"]').forEach((r) => {
         if (q.paths && !q.paths.includes('plan')) currentInputs[q.key] = q.default;
       }
     }
-    if (chosenExperiment()) pickerOpen = false;
     renderAll();
   });
 });
@@ -793,7 +856,6 @@ if (fromUrl) {
   currentInputs = { ...scenario.defaults(), ...fromUrl.inputs };
   currentPath = fromUrl.path;
   currentExampleId = fromUrl.exampleId;
-  if (chosenExperiment()) pickerOpen = false;
   document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === currentPath; });
 }
 renderAll();

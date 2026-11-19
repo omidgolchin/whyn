@@ -357,3 +357,34 @@ option was taken and is recorded here.
       Q14's numbers are unchanged and now run behind the example's
       button. No change to src/core, the scenario, the copy library
       or the tests: 45 of 45 pass.
+
+15. **A steady page (2026-11-19).** Asked for by the owner: opening an
+    info button pushed the page around, choosing an experiment
+    changed the whole layout, and too many parts moved for a
+    researcher who is not tech-savvy. Done by Claude, page layer only.
+    - The frame is fixed from the first visit: steps 1 to 3 on the
+      left and the "Your answer" panel on the right, all in place
+      before anything is chosen. The panel says what will appear in
+      it; step 3 holds a one-line placeholder. Choosing fills them in
+      where they stand; the layout no longer switches from one column
+      to two, and the picker no longer folds to one line.
+    - Explanations open in one floating tooltip, the standard pattern:
+      it shows on hover with a mouse, a click or tap keeps it open,
+      and Esc, a click elsewhere or the button again closes it. It
+      sits over the page and moves nothing. The verdict table, the
+      example's story and the list of designs not covered yet open
+      the same way.
+    - Buttons that do nothing yet ("Copy the justification", "Read
+      it first", "Start over") are shown greyed out instead of
+      appearing later.
+    - Measured in a browser, on a 1280 px desktop, over seven common
+      interactions: blocks that moved or appeared went from 13 to 6,
+      and none of the remaining 6 is a jump of content above the
+      point clicked. The one deliberate shift left is switching
+      between checking and planning, which adds or removes the
+      "number you were given" question.
+    - The page check now covers the fixed frame, the tooltip opening
+      and Esc closing it. Q14's numbers are unchanged; its story
+      check now reads the example's story behind its label. No
+      change to src/core, the scenario, the copy library or the
+      tests: 45 of 45 pass.
