@@ -78,13 +78,22 @@ if (JSDOM) {
     r.dispatchEvent(new window.Event('change', { bubbles: true }));
   };
   pick('path', 'plan');
-  check(!results().includes('Still needed') && box('#details-placeholder'), 'start: one answer is not enough');
+  check(!results().includes('Still needed') && box('#details-placeholder') && doc.querySelector('#apply-choices').disabled, 'start: one answer is not enough');
   pick('experiment', 'mean-independent');
-  check(!box('#details-placeholder') && doc.querySelector('#q-delta'), 'both answers fill step 3 in place');
+  check(box('#details-placeholder') && !doc.querySelector('#apply-choices').disabled, 'choosing does not change the page until Continue');
+  doc.querySelector('#apply-choices').click();
+  check(!box('#details-placeholder') && doc.querySelector('#q-delta'), 'Continue fills step 3 in place');
   check(results().includes('Still needed'), 'the answer panel names what is still needed');
   check(doc.querySelectorAll('#experiment-picker input[name="experiment"]').length === 4 &&
     doc.querySelector('input[name="experiment"][value="mean-independent"]').checked, 'the picker stays as it was, with the choice marked');
   check(!doc.querySelector('input[name="outcome"]'), 'the details do not ask again what step 2 answered');
+  check(text('#apply-choices') === 'Apply changes' && doc.querySelector('#apply-choices').disabled, 'after Continue the button waits for a change');
+  pick('experiment', 'rate-independent');
+  check(doc.querySelector('#q-sd') && !doc.querySelector('input[name="baseRateChoice"]') && !doc.querySelector('#apply-choices').disabled,
+    'a changed choice waits for Apply changes; the questions below stay as they were');
+  pick('experiment', 'mean-independent');
+  check(doc.querySelector('#apply-choices').disabled, 'changing back needs no apply');
+  check(text('#pop-exp-rate-independent').includes('For example') && text('#pop-path-check').includes('For example'), 'every choice in steps 1 and 2 has an example behind its info button');
 
   // Explanations open in one floating tooltip and move nothing.
   const deltaInfo = doc.querySelector('button.info[data-pop="hint-delta"]');
@@ -151,8 +160,10 @@ if (JSDOM) {
   const pathRadio = (v) => window.document.querySelector(`input[name="path"][value="${v}"]`);
   pathRadio('plan').checked = true;
   pathRadio('plan').dispatchEvent(new window.Event('change', { bubbles: true }));
+  window.document.querySelector('#apply-choices').click();
   pathRadio('check').checked = true;
   pathRadio('check').dispatchEvent(new window.Event('change', { bubbles: true }));
+  window.document.querySelector('#apply-choices').click();
 
   const sizeInput = window.document.querySelector('#q-givenSize');
   sizeInput.value = '300';

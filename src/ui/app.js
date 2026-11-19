@@ -37,16 +37,24 @@ const GROUPS = [
 const EXPERIMENTS = [
   { id: 'rate-independent', outcome: 'rate', assignment: 'independent',
     title: 'Two separate groups, a yes/no outcome',
-    tests: 'Two-proportion z-test; the same as a chi-square test on a 2×2 table' },
+    tests: 'Two-proportion z-test; the same as a chi-square test on a 2×2 table',
+    example: 'A clinic texts a reminder to half its patients and not to the other half, then compares the share who show up: say 70% without the text and 75% with it.',
+    pickIf: 'Pick this when each unit gets one condition and each unit\'s outcome is a yes or a no.' },
   { id: 'mean-independent', outcome: 'mean', assignment: 'independent',
     title: 'Two separate groups, a measurement',
-    tests: 'Two-sample t-test' },
+    tests: 'Two-sample t-test',
+    example: 'Tomato plants get fertilizer A or fertilizer B, one each, and you compare their average height after six weeks.',
+    pickIf: 'Pick this when each unit gets one condition and the outcome is a number you measure.' },
   { id: 'mean-paired', outcome: 'mean', assignment: 'paired',
     title: 'The same units under both conditions, a measurement',
-    tests: 'Paired t-test' },
+    tests: 'Paired t-test',
+    example: 'Each volunteer\'s reaction time is measured once with coffee and once without, and you compare the difference within each person.',
+    pickIf: 'Pick this when every unit is measured under both conditions and the outcome is a number.' },
   { id: 'rate-paired', outcome: 'rate', assignment: 'paired',
     title: 'The same units under both conditions, a yes/no outcome over repeated tries',
-    tests: 'Paired comparison of rates' },
+    tests: 'Paired comparison of rates',
+    example: 'Each exercise in a language app is shown to many learners in its old design and in its new one, and you compare the share answered correctly, exercise by exercise.',
+    pickIf: 'Pick this when every unit gets both conditions and its outcome is a yes or no counted over many tries.' },
 ];
 const LATER = [
   { title: 'Three or more groups', tests: 'one-way ANOVA', tool: 'gpower' },
@@ -586,19 +594,74 @@ function chosenExperiment() {
 function renderPicker() {
   const chosen = chosenExperiment();
   if (pickerEl.dataset.built) {
-    pickerEl.querySelectorAll('input[name="experiment"]').forEach((r) => { r.checked = Boolean(chosen && r.value === chosen.id); });
+    pickerEl.querySelectorAll('input[name="experiment"]').forEach((r) => { r.checked = r.value === pending.exp; });
     return;
   }
-  const rows = EXPERIMENTS.map((e) => `<label class="exp">
-      <input type="radio" name="experiment" value="${e.id}"${chosen && chosen.id === e.id ? ' checked' : ''}>
+  const rows = EXPERIMENTS.map((e) => `<div class="exp-row"><label class="exp">
+      <input type="radio" name="experiment" value="${e.id}"${pending.exp === e.id ? ' checked' : ''}>
       <span class="exp-body"><span class="exp-title">${e.title}</span><span class="exp-tests">${e.tests}</span></span>
-    </label>`).join('');
+    </label><button type="button" class="info exp-info" data-pop="pop-exp-${e.id}" aria-controls="whyn-pop" aria-expanded="false" aria-label="An example: ${e.title}">i</button></div>` +
+    `<div id="pop-exp-${e.id}" class="pop-src" hidden><p class="why-label">${e.title}</p><p>For example: ${e.example}</p><p>${e.pickIf}</p><p class="exp-tests">Known as: ${e.tests}.</p></div>`).join('');
   const later = LATER.map((e) => `<li><span class="exp-title">${e.title}</span> <span class="exp-tests">(${e.tests}).</span> ${TOOLS[e.tool]}.</li>`).join('');
   pickerEl.innerHTML = `<fieldset class="exp-list"><legend class="visually-hidden">What does your experiment compare?</legend>${rows}</fieldset>` +
     '<p class="later-line">Not in WhyN yet: ANOVA, correlation, larger chi-square tables, survival, clusters. ' +
     '<button type="button" class="info" data-pop="later-list" aria-controls="whyn-pop" aria-expanded="false" aria-label="Designs WhyN does not size yet">i</button></p>' +
     `<div id="later-list" class="pop-src pop-wide" hidden><p class="why-label">Not in WhyN yet</p><p>WhyN sizes the four designs above. Sizing one of these with them would give the wrong number, so use another tool for now:</p><ul>${later}</ul></div>`;
   pickerEl.dataset.built = '1';
+}
+
+// Steps 1 and 2 are held as pending choices until Continue (or Apply
+// changes) is pressed, so nothing else on the page reacts while a
+// person is still deciding.
+const pending = { path: null, exp: null };
+const applyBtn = $('#apply-choices');
+const applyNote = $('#apply-note');
+function syncPending() {
+  pending.path = currentPath;
+  pending.exp = chosenExperiment()?.id ?? null;
+  document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === pending.path; });
+}
+function updateApply() {
+  const complete = Boolean(pending.path && pending.exp);
+  const applied = ready();
+  const same = applied && pending.path === currentPath && pending.exp === chosenExperiment()?.id;
+  applyBtn.textContent = applied ? 'Apply changes' : 'Continue';
+  applyBtn.disabled = !complete || same;
+  applyNote.textContent = applied && !same && complete
+    ? 'Below still shows your earlier choice.'
+    : (!complete && (pending.path || pending.exp) ? 'Answer both questions to continue.' : '');
+}
+function applyChoices() {
+  if (!pending.path || !pending.exp) return;
+  if (pending.path !== currentPath) {
+    // The worked examples name an engine-level deltaSource. The
+    // questions replace it — the check path asks the Δ-source
+    // question itself — so a path switch drops it rather than
+    // letting it answer that question silently (Addendum 2).
+    delete currentInputs.deltaSource;
+    if (pending.path === 'plan') {
+      // The check-only questions belong to the check path; leaving
+      // their answers in place would check a size the planning path
+      // never asked about.
+      for (const q of scenario.questions) {
+        if (q.paths && !q.paths.includes('plan')) currentInputs[q.key] = q.default;
+      }
+    }
+  }
+  currentPath = pending.path;
+  const e = EXPERIMENTS.find((x) => x.id === pending.exp);
+  currentInputs.outcome = e.outcome;
+  currentInputs.assignment = e.assignment;
+  const claimQ = scenario.questions.find((q) => q.key === 'claim');
+  if (!applies(claimQ, currentInputs)) currentInputs.claim = null;
+  renderAll();
+  const first = formEl.querySelector('input:not([type=radio]), input');
+  first?.focus({ preventScroll: true });
+  const top = $('#step-details').getBoundingClientRect?.().top ?? 0;
+  if (top > (window.innerHeight || 0) - 120) {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    $('#step-details').scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
 }
 
 function setActions(on) {
@@ -618,7 +681,7 @@ function renderAll() {
   const r = ready();
   $('#details-placeholder').hidden = r;
   formEl.hidden = !r;
-  startOverBtn.disabled = !(currentPath || currentInputs.outcome || currentInputs.assignment);
+  startOverBtn.disabled = !(currentPath || currentInputs.outcome || currentInputs.assignment || pending.path || pending.exp);
   if (r) {
     buildForm();
     render();
@@ -635,6 +698,7 @@ function renderAll() {
     jumpEl.hidden = true;
     jumpEl.textContent = '';
   }
+  updateApply();
   syncJump();
 }
 
@@ -642,6 +706,8 @@ function startOver() {
   currentInputs = { ...scenario.defaults() };
   currentPath = null;
   currentExampleId = null;
+  pending.path = null;
+  pending.exp = null;
   document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = false; });
   history.replaceState(null, '', location.pathname);
   renderAll();
@@ -649,13 +715,11 @@ function startOver() {
 
 pickerEl.addEventListener('change', (event) => {
   if (event.target.name !== 'experiment') return;
-  const e = EXPERIMENTS.find((x) => x.id === event.target.value);
-  currentInputs.outcome = e.outcome;
-  currentInputs.assignment = e.assignment;
-  const claimQ = scenario.questions.find((q) => q.key === 'claim');
-  if (!applies(claimQ, currentInputs)) currentInputs.claim = null;
-  renderAll();
+  pending.exp = event.target.value;
+  startOverBtn.disabled = false;
+  updateApply();
 });
+applyBtn.addEventListener('click', applyChoices);
 startOverBtn.addEventListener('click', startOver);
 
 function loadExample(id) {
@@ -664,7 +728,7 @@ function loadExample(id) {
   currentExampleId = id;
   currentPath = example.path;
   currentInputs = { ...scenario.defaults(), ...example.inputs };
-  document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === currentPath; });
+  syncPending();
   renderAll();
   const menu = $('#example-menu');
   if (menu) menu.open = false;
@@ -775,21 +839,9 @@ window.addEventListener('resize', () => { if (popBtn) placePop(popBtn); });
 
 document.querySelectorAll('input[name="path"]').forEach((r) => {
   r.addEventListener('change', () => {
-    currentPath = r.value;
-    // The worked examples name an engine-level deltaSource. The
-    // questions replace it — the check path asks the Δ-source
-    // question itself — so a hand path switch drops it rather than
-    // letting it answer that question silently (Addendum 2).
-    delete currentInputs.deltaSource;
-    if (currentPath === 'plan') {
-      // The check-only questions belong to the check path; leaving
-      // their answers in place would check a size the planning path
-      // never asked about.
-      for (const q of scenario.questions) {
-        if (q.paths && !q.paths.includes('plan')) currentInputs[q.key] = q.default;
-      }
-    }
-    renderAll();
+    pending.path = r.value;
+    startOverBtn.disabled = false;
+    updateApply();
   });
 });
 
@@ -856,6 +908,6 @@ if (fromUrl) {
   currentInputs = { ...scenario.defaults(), ...fromUrl.inputs };
   currentPath = fromUrl.path;
   currentExampleId = fromUrl.exampleId;
-  document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === currentPath; });
+  syncPending();
 }
 renderAll();

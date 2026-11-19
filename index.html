@@ -33,15 +33,28 @@
     <section class="ask" aria-label="Your experiment">
       <div class="step step-path">
         <h2 class="step-title"><span class="step-n" aria-hidden="true">1</span> What do you want to do?</h2>
-        <fieldset class="path-toggle">
+        <fieldset class="exp-list path-list">
           <legend class="visually-hidden">What do you want to do?</legend>
-          <label><input type="radio" name="path" value="check"><span>Check a sample size</span></label>
-          <label><input type="radio" name="path" value="plan"><span>Plan a sample size</span></label>
+          <div class="exp-row">
+            <label class="exp"><input type="radio" name="path" value="check"><span class="exp-body"><span class="exp-title">Check a sample size</span><span class="exp-tests">Someone gave you a number. See if it is enough.</span></span></label>
+            <button type="button" class="info exp-info" data-pop="pop-path-check" aria-controls="whyn-pop" aria-expanded="false" aria-label="An example of checking a sample size">i</button>
+          </div>
+          <div class="exp-row">
+            <label class="exp"><input type="radio" name="path" value="plan"><span class="exp-body"><span class="exp-title">Plan a sample size</span><span class="exp-tests">No number yet. Work out how many you need.</span></span></label>
+            <button type="button" class="info exp-info" data-pop="pop-path-plan" aria-controls="whyn-pop" aria-expanded="false" aria-label="An example of planning a sample size">i</button>
+          </div>
         </fieldset>
+        <div id="pop-path-check" class="pop-src" hidden><p class="why-label">Check a sample size</p><p>For example, an AI assistant told you to recruit 300 people per group to detect a 4-point rise in a pass rate. WhyN shows whether 300 can find that rise, and what it would take if not.</p><p>Pick this when you already have a number from someone or somewhere.</p></div>
+        <div id="pop-path-plan" class="pop-src" hidden><p class="why-label">Plan a sample size</p><p>For example, you want to detect a 5-point rise in a pass rate and have no number yet. WhyN works out how many people you need, with the reason for each number.</p><p>Pick this when you are designing the experiment from scratch.</p></div>
       </div>
       <div class="step step-experiment">
-        <h2 class="step-title"><span class="step-n" aria-hidden="true">2</span> What does your experiment compare?</h2>
+        <h2 class="step-title"><span class="step-n" aria-hidden="true">2</span> What does your experiment compare? <button type="button" class="info" data-pop="pop-unit" aria-controls="whyn-pop" aria-expanded="false" aria-label="What counts as a unit?">i</button></h2>
+        <div id="pop-unit" class="pop-src" hidden><p class="why-label">What counts as a unit?</p><p>A unit is whatever gets a condition: a person, a plant, a plot, a classroom, an exercise. "Both conditions" means each unit is measured under each one.</p></div>
         <div id="experiment-picker"></div>
+        <div class="apply-row">
+          <button type="button" id="apply-choices" class="primary" disabled>Continue</button>
+          <span id="apply-note" class="apply-note" aria-live="polite"></span>
+        </div>
       </div>
       <div class="step step-details" id="step-details">
         <div class="step-head">
