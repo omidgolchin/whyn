@@ -6,7 +6,7 @@
 import { computePlan } from '../core/plan.js';
 import { verdictChances } from '../core/budget.js';
 import * as scenario from '../scenarios/two-condition.js';
-import { COPY, GUARDRAILS, powerCostLine } from '../copy.js';
+import { COPY, GUARDRAILS, powerCostLine, exclusiveVerdicts } from '../copy.js';
 import { EXAMPLES } from './examples.js';
 import { readState, writeState } from './state.js';
 import { budgetExplorer, verdictCurve } from './charts.js';
@@ -181,14 +181,21 @@ function powerCost(result) {
   });
 }
 
-function verdictTable(verdicts, result) {
-  const showBoth = ['zero', 'half', 'delta'].some((k) => verdicts[k].both > 0.0005);
-  const row = (label, v) => `<tr><th scope="row">${label}</th>` +
-    `<td>${fmtPct(v.holds)}</td><td>${fmtPct(v.doesNotHold)}</td><td>${fmtPct(v.reversal)}</td>` +
-    `<td>${fmtPct(v.inconclusive)}</td>${showBoth ? `<td>${fmtPct(v.both)}</td>` : ''}</tr>`;
+// The verdict table shows mutually exclusive cells (decision log
+// #7): the fourth verdict is carved out of both "holds" and "does
+// not hold", a reversal sits inside "does not hold" as a sub-line,
+// and every row adds up to 100%.
+function verdictTable(verdicts, result, showBoth) {
+  const row = (label, v) => {
+    const c = exclusiveVerdicts(v);
+    return `<tr><th scope="row">${label}</th>` +
+      `<td>${fmtPct(c.holds)}</td>` +
+      `<td>${fmtPct(c.doesNotHold)} (incl. ${fmtPct(c.reversal)} reversal)</td>` +
+      `<td>${fmtPct(c.inconclusive)}</td>${showBoth ? `<td>${fmtPct(c.smaller)}</td>` : ''}</tr>`;
+  };
   return `<table class="verdicts">
     <thead><tr><th scope="col">If the true effect is</th><th scope="col">holds</th>` +
-    `<th scope="col">does not hold</th><th scope="col">reversal</th><th scope="col">inconclusive</th>` +
+    `<th scope="col">does not hold</th><th scope="col">inconclusive</th>` +
     `${showBoth ? '<th scope="col">an effect, but smaller than Δ</th>' : ''}</tr></thead>
     <tbody>
       ${row('0', verdicts.zero)}
@@ -241,10 +248,15 @@ function renderResults(result) {
   parts.push(`<div class="number"><h3>3 · Interval level</h3>
     <p class="big">${fmtNum(100 * result.intervalLevel)}% <span class="sub">per claim</span></p>
     <p class="why">Family error rate ${fmtPct(result.inputs.alpha, 0)} split across ${result.inputs.claims} claim(s) (Bonferroni), ${fmtPct(result.alphaPerClaim)} each; a false "holds" in the predicted direction is at most ${tailPct} per claim.</p></div>`);
-  // 4. Verdict chances.
+  // 4. Verdict chances. When the fourth verdict can occur, one line
+  // states how the table's cells relate to power: power counts every
+  // interval that clears 0, so it is "holds" and "smaller than Δ"
+  // together (decision log #7).
+  const showBoth = ['zero', 'half', 'delta'].some((k) => focus.verdicts[k].both > 0.0005);
   parts.push(`<div class="number"><h3>4 · The chance of each verdict at ${focusLabel}</h3>
-    ${verdictTable(focus.verdicts, result)}
-    <p class="why">With Δ set, a result has three readings: holds, does not hold, inconclusive. A reversal — an interval wholly on the wrong side of 0 — is part of "does not hold".</p></div>`);
+    ${verdictTable(focus.verdicts, result, showBoth)}${showBoth
+      ? '<p class="why">"holds" and "an effect, but smaller than Δ" together make up the power: power counts every interval that clears 0 in the predicted direction, on either side of Δ.</p>'
+      : ''}</div>`);
   // The values the page assumed, named as assumptions.
   if (typeof scenario.assumptionLine === 'function') {
     const items = scenario.assumptionLine(result.inputs, { pct: fmtPct });
@@ -387,7 +399,8 @@ $('#observed-power').addEventListener('click', () => {
   note.hidden = false;
 });
 
-// Start: a shared link wins; otherwise open on example 3, the check path.
+// Start: a shared link wins; otherwise open on the plain check
+// (decision log #8): an AI-given size in the plainest design.
 const fromUrl = readState(scenario);
 if (fromUrl) {
   currentInputs = { ...scenario.defaults(), ...fromUrl.inputs };
@@ -397,5 +410,5 @@ if (fromUrl) {
   buildForm();
   render();
 } else {
-  loadExample('ex3');
+  loadExample('ex4');
 }

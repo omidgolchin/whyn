@@ -4,6 +4,7 @@
 
 import { invNorm, normCdf } from '../core/normal.js';
 import { verdictChances, powerAt } from '../core/budget.js';
+import { exclusiveVerdicts } from '../copy.js';
 import * as scenario from '../scenarios/two-condition.js';
 
 const LEVELS = [0.90, 0.95, 0.975, 0.99, 0.995];
@@ -207,11 +208,13 @@ export function verdictCurve(container, ctx) {
   const points = { holds: [], doesNotHold: [], inconclusive: [], both: [] };
   for (let i = 0; i <= 80; i++) {
     const e = (-0.5 + (2 * i) / 80) * delta;
-    const v = verdictChances({ effect: e, se, delta, zA });
-    points.holds.push([e, v.holds]);
-    points.doesNotHold.push([e, v.doesNotHold]);
-    points.inconclusive.push([e, v.inconclusive]);
-    if (v.both > 0.0005) { bothSeen = true; points.both.push([e, v.both]); }
+    // The curves show the table's mutually exclusive cells (decision
+    // log #7), so the marked points at 0, Δ/2 and Δ agree with it.
+    const c = exclusiveVerdicts(verdictChances({ effect: e, se, delta, zA }));
+    points.holds.push([e, c.holds]);
+    points.doesNotHold.push([e, c.doesNotHold]);
+    points.inconclusive.push([e, c.inconclusive]);
+    if (c.smaller > 0.0005) { bothSeen = true; points.both.push([e, c.smaller]); }
   }
   const line = (pts) => pts.map(([e, p], i) => `${i === 0 ? 'M' : 'L'}${x(e).toFixed(1)},${y(p).toFixed(1)}`).join(' ');
   for (const [key, , cls] of series) {
@@ -223,9 +226,10 @@ export function verdictCurve(container, ctx) {
   }
   // The three key points, marked on every curve.
   for (const e of [0, delta / 2, delta]) {
-    const v = verdictChances({ effect: e, se, delta, zA });
+    const c = exclusiveVerdicts(verdictChances({ effect: e, se, delta, zA }));
+    const shown = { holds: c.holds, doesNotHold: c.doesNotHold, inconclusive: c.inconclusive, both: c.smaller };
     for (const [key, , cls] of series) {
-      svg.appendChild(el('circle', { cx: x(e), cy: y(v[key]), r: 3.2, class: `dot ${cls}` }));
+      svg.appendChild(el('circle', { cx: x(e), cy: y(shown[key]), r: 3.2, class: `dot ${cls}` }));
     }
     svg.appendChild(el('text', { x: x(e), y: H - 18, class: 'axis', 'text-anchor': 'middle' },
       e === 0 ? '0' : e === delta / 2 ? `Δ/2 (${(scale * e).toFixed(scale === 100 ? 1 : 2)} ${unitWord})` : `Δ (${(scale * e).toFixed(scale === 100 ? 1 : 2)} ${unitWord})`));

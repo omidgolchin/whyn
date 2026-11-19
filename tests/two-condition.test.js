@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { alphaPerClaim } from '../src/core/multiplicity.js';
 import { budgetK, mdeAt, verdictChances } from '../src/core/budget.js';
 import { invNorm, normCdf } from '../src/core/normal.js';
-import { powerCostLine } from '../src/copy.js';
+import { powerCostLine, exclusiveVerdicts } from '../src/copy.js';
 import * as scenario from '../src/scenarios/two-condition.js';
 import { computePlan } from '../src/core/plan.js';
 import { EXAMPLES } from '../src/ui/examples.js';
@@ -438,4 +438,83 @@ test('Q12: an unanswered Δ-source counts as "not sure" on a checked size', () =
   const named = plan({ ...q2base, deltaSameAdvice: null, deltaSource: 'substance' });
   assert.equal(named.inputs.deltaSource, 'substance');
   assert.ok(!named.guardrails.map((g) => g.id).includes('sameSource'));
+});
+
+// --- Addendum 3, the owner's own rulings: rows Q13-Q15 ----------------
+
+test('Q13: every displayed verdict row sums to 100%, the fourth verdict carved out', () => {
+  const fmtPct = (x) => `${(100 * x).toFixed(1)}%`;
+  const checkVerdicts = (verdicts, label) => {
+    for (const k of ['zero', 'half', 'delta']) {
+      const v = verdicts[k];
+      const c = exclusiveVerdicts(v);
+      // The partition is exact before any rounding.
+      close(c.holds + c.doesNotHold + c.smaller + c.inconclusive, 1, 1e-9, `Q13 ${label} ${k}: cells sum to 1`);
+      // And as displayed (one decimal each), within the row's ±0.1.
+      const displayed = [c.holds, c.doesNotHold, c.inconclusive, c.smaller]
+        .reduce((s, x) => s + parseFloat(fmtPct(x)), 0);
+      assert.ok(Math.abs(displayed - 100) <= 0.1 + 1e-9, `Q13 ${label} ${k}: displayed sum ${displayed}`);
+      // A reversal is part of "does not hold", never on top of it.
+      assert.ok(c.reversal <= c.doesNotHold + 1e-12, `Q13 ${label} ${k}: reversal inside does-not-hold`);
+      // Power keeps its standard meaning: the two cells that clear 0
+      // together are the core's holds chance.
+      close(c.holds + c.smaller, v.holds, 1e-12, `Q13 ${label} ${k}: holds + smaller = power's chance`);
+    }
+  };
+  for (const ex of EXAMPLES) {
+    const r = plan({ ...scenario.defaults(), ...ex.inputs });
+    checkVerdicts((r.given ?? r.planned).verdicts, ex.id);
+  }
+  // At a size large enough for the fourth verdict to show, it is
+  // carved out of both cells it used to be counted in.
+  const ex1 = EXAMPLES.find((e) => e.id === 'ex1');
+  const big = plan({ ...scenario.defaults(), ...ex1.inputs, givenUnits: 5000 });
+  assert.ok(big.given.verdicts.half.both > 0, 'the fourth verdict occurs at 5,000 units');
+  const c = exclusiveVerdicts(big.given.verdicts.half);
+  assert.ok(c.holds < big.given.verdicts.half.holds, 'the fourth verdict is carved out of holds');
+  assert.ok(c.doesNotHold < big.given.verdicts.half.doesNotHold, 'the fourth verdict is carved out of does-not-hold');
+  checkVerdicts(big.given.verdicts, 'ex1 at 5000');
+});
+
+test('Q14: the page opens on the plain check — 300 students per group, a 4-point rise', () => {
+  // Pinned against the reference script before this test was written:
+  // independent groups, rates 0.5/0.5 (the base rate is not known),
+  // Δ = 0.04, K = k_value(0.95, 0.80) = 2.801585. Required per group:
+  // 0.5 * K^2 / 0.04^2 = 2452.7749 -> 2,453 per group, 4,906 in all.
+  // At 300 per group, outcome_probs gives MDE 11.4374 points and
+  // holds at Δ 0.16350 — Q2's pins, the same case by construction.
+  const first = EXAMPLES[0];
+  assert.equal(first.id, 'ex4');
+  assert.equal(first.path, 'check');
+  assert.ok(first.story.includes('300 per group'), first.story);
+  assert.equal(first.inputs.deltaSameAdvice, 'no');
+  assert.equal(first.inputs.baseRateChoice, 'unknown');
+  const result = plan({ ...scenario.defaults(), ...first.inputs });
+  assert.equal(result.required.roundedPerPart, 2453, 'Q14: 2,453 per group');
+  assert.equal(result.required.roundedTotal, 4906, 'Q14: 4,906 in all');
+  assert.equal(result.given.totalUnits, 600);
+  close(100 * result.given.mde, 11.44, 0.01, 'Q14 MDE at 300 per group');
+  close(result.given.verdicts.delta.holds, 0.164, 0.001, 'Q14 holds at delta');
+  const echoFmt = { num: (x) => Number(x.toFixed(2)).toLocaleString('en-US') };
+  assert.equal(
+    scenario.sizeEcho(result.inputs, echoFmt),
+    'You entered 300 per group (600 in total).',
+  );
+  // The Δ was the team's own question, not the advice's: the
+  // independence guardrail does not fire.
+  assert.ok(!result.guardrails.map((g) => g.id).includes('sameSource'));
+});
+
+test('Q15: examples 1 to 3 keep their numbers', () => {
+  const byId = (id) => EXAMPLES.find((e) => e.id === id);
+  const ex1 = plan({ ...scenario.defaults(), ...byId('ex1').inputs });
+  assert.equal(ex1.required.roundedTotal, 2054, 'Q15 example 1 required total');
+  close(100 * ex1.given.mde, 4.99, 0.01, 'Q15 example 1 MDE at the planned size');
+  const ex2 = plan({ ...scenario.defaults(), ...byId('ex2').inputs });
+  assert.equal(ex2.required.roundedTotal, 2054, 'Q15 example 2 required total');
+  close(100 * ex2.given.mde, 9.97, 0.01, 'Q15 example 2 MDE at the planned size');
+  const ex3 = plan({ ...scenario.defaults(), ...byId('ex3').inputs });
+  assert.equal(ex3.required.roundedTotal, 2054, 'Q15 example 3 required total');
+  close(100 * ex3.given.mde, 8.01, 0.01, 'Q15 example 3 MDE at the given size');
+  close(ex3.given.verdicts.delta.holds, 0.376, 0.001, 'Q15 example 3 holds at delta');
 });

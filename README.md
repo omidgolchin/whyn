@@ -78,8 +78,10 @@ target. WhyN shows that floor whenever it applies.
 - **Plan from scratch**: enter the design and get the required size.
 
 The page opens on a worked example of the first path: an AI assistant
-recommended 400 exercises per group, and at the team's own settings
-that number reliably detects only gains of 8 points.
+told a team that 300 students per group would detect a 4-point rise
+in a course's pass rate. The formula says that number reliably
+detects only rises of 11.4 points, and that a 4-point rise needs
+4,906 students in all.
 
 ## Run it
 

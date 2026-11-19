@@ -194,3 +194,55 @@ option was taken and is recorded here.
       counted as "no".
     The reversal column and the choice of landing example still
     wait for the owner's own ruling and are untouched.
+
+11. **Addendum 3 to the ruling (2026-11-18).** The owner's own
+    rulings — decision log #7 (the verdict table) and #8 (the
+    landing example) — relayed by Claude after he re-checked the
+    shipped build (`fa63282`: 41 of 41 tests, the page check, the
+    landing page) and confirmed this build's reading of Q11 in
+    #10. Applied on the owner's proceed the same day.
+    - The verdict categories the page displays are mutually
+      exclusive, and every displayed row adds up to 100%. The
+      core's chances overlap by design: an interval that lands
+      strictly between 0 and Δ counts in both "holds" and "does
+      not hold", and a reversal counts inside "does not hold"
+      while also standing as its own column — the landing table's
+      top row added up to 101.2%. The partition is made where the
+      chances are displayed, not in the core: `exclusiveVerdicts`
+      in src/copy.js carves the fourth verdict out of both cells,
+      and the reversal shows inside "does not hold" as a sub-line
+      ("37.6% (incl. 1.2% reversal)"). The note under the table
+      that explained the reversal is gone. The results table and
+      the verdict curve — whose marked points are the table's
+      chances at 0, Δ/2 and Δ — both use the partition. No core
+      file changed and no probability changed; only the cell a
+      chance is displayed in. Power keeps its standard meaning,
+      an interval that excludes 0; when the fourth column shows,
+      one line under the table says that "holds" and "smaller
+      than Δ" together make up the power. The justification keeps
+      the core's three chances at the required size, where the
+      fourth verdict cannot occur at power below about 97.5%.
+    - The page opens on the plainest check (decision log #8). A
+      new fictional example stands first in the bar: a team asked
+      an AI assistant how many students to enroll to detect a
+      4-point rise in a course's pass rate, and was told 300 per
+      group. Its inputs are Q2's case — check path, independent
+      groups, a rate, Δ = 4 points, the base rate not known, one
+      claim, Δ source "no" — so its numbers are Q2's pins plus
+      the required size: MDE 11.44 points and holds 16.4% at Δ,
+      and 4,906 students in all (2,453 per group). The required
+      size was pinned against the reference script before Q14
+      was written (per group 0.5 · K² / 0.04² = 2452.7749 at
+      K = 2.801585). Example 3 stays, as a later button, and
+      examples 1–3 keep their numbers (Q15); the README's
+      opening-example paragraph names the new example. The new
+      example's why-lines follow the reasons rule (decision log
+      #2: at most three sentences, about 60 words), and the
+      guardrail test now holds every example's why-lines to it,
+      not only the texts in src/copy.js.
+    - Rows Q13–Q15 were added as named tests. The scenario
+      version is now 5: no input changed its meaning, but a link
+      shared before this change displays its verdict table
+      partitioned differently — at sizes where the fourth verdict
+      can occur, the "holds" it shows no longer includes the
+      fourth verdict's share.

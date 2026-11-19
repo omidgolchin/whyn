@@ -118,3 +118,25 @@ function pct1(x) {
 export function powerCostLine(power, { inconclusive, doesNotHold }) {
   return `At the required size, if the true effect is exactly Δ, ${pct1(1 - power)} of studies end without holds: ${pct1(inconclusive)} inconclusive, ${pct1(doesNotHold)} does not hold.`;
 }
+
+// The verdict chances as the results display them (decision log #7,
+// Addendum 3 to the ruling): mutually exclusive cells that add up to
+// 1. The core's chances overlap by design — "holds" counts every
+// interval that clears 0, "does not hold" every interval that
+// excludes effects of Δ or more, and an interval that lands strictly
+// between 0 and Δ is counted in both: it is the fourth verdict, "an
+// effect, but smaller than Δ". Carving that overlap out of both
+// cells leaves each result in exactly one cell. A reversal stays
+// inside "does not hold", shown there as a sub-line. No probability
+// changes — only the partition the display uses. Power keeps its
+// standard meaning: holds + smaller is the core's holds chance, the
+// share of intervals that clear 0 in the predicted direction.
+export function exclusiveVerdicts(v) {
+  return {
+    holds: v.holds - v.both,
+    doesNotHold: v.doesNotHold - v.both,
+    reversal: v.reversal,
+    smaller: v.both,
+    inconclusive: v.inconclusive,
+  };
+}

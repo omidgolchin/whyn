@@ -10,6 +10,7 @@ import { alphaPerClaim } from '../src/core/multiplicity.js';
 import { budgetK, powerAt, verdictChances, bothThresholdMultiple } from '../src/core/budget.js';
 import * as scenario from '../src/scenarios/two-condition.js';
 import { COPY, GUARDRAILS, powerCostLine } from '../src/copy.js';
+import { EXAMPLES } from '../src/ui/examples.js';
 
 function close(actual, expected, tol, label) {
   assert.ok(
@@ -165,6 +166,11 @@ test('decision log #2: reasons run to at most three sentences and about 60 words
   // The split shown here is the pinned one from Q5 (80% power, one
   // claim, 5% two-sided); only the line's length is on trial here.
   texts.push(['powerCostLine(0.8, split at Δ)', powerCostLine(0.8, { inconclusive: 0.175, doesNotHold: 0.025 })]);
+  // The examples' why-lines are reasons too, and are held to the
+  // same rule (the plain check's lines were written to it, Addendum 3).
+  for (const ex of EXAMPLES) {
+    for (const [head, text] of ex.whyLines) texts.push([`example ${ex.id}, why: ${head}`, text]);
+  }
   for (const [name, text] of texts) {
     assert.ok(sentences(text) <= 3, `${name}: ${sentences(text)} sentences`);
     assert.ok(words(text) <= 60, `${name}: ${words(text)} words`);

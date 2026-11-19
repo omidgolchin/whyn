@@ -57,23 +57,51 @@ if (JSDOM) {
   const text = (sel) => window.document.querySelector(sel)?.textContent ?? '';
   const results = () => text('#results');
 
-  check(results().includes('2,054 units'), 'opens on example 3: required total 2,054');
-  check(results().includes('8.01 points'), 'example 3: MDE 8.01 points at the given size');
-  check(results().includes('37.6%'), 'example 3: verdict chance 37.6%');
-  check(!window.document.querySelector('#example-story').hidden, 'example 3: story visible');
-  check(text('#justification-text').includes('800 units'), 'justification mentions the given 800 units');
+  // Addendum 3: the page opens on the plain check — an AI-given 300
+  // students per group for a 4-point pass-rate rise (Q14).
+  check(results().includes('4,906 units'), 'Q14: opens on the plain check: required total 4,906');
+  check(results().includes('11.44 points'), 'Q14: MDE 11.44 points at the given size');
+  check(results().includes('16.4%'), 'Q14: verdict chance 16.4% at delta');
+  check(!window.document.querySelector('#example-story').hidden, 'Q14: the plain check story is visible');
+  check(text('#justification-text').includes('600 units'), 'Q14: justification mentions the given 600 units');
   check(results().includes('Assumed:'), 'Q4: the assumption line is shown under the numbers');
   check(results().includes("base rate 50% (you didn't know it)"), 'Q4: an unknown base rate is named as an assumption');
   check(results().includes('20% of studies end without holds'), 'Q5: the cost of 80% power is stated in the results');
   check(text('#justification-text').includes('20% of studies end without holds'), 'Q8: the justification states the cost of power too');
-
-  // Addendum 2, on the landing example as it opens.
-  check(window.document.querySelector('#q-givenSize').value === '400', 'Q11: the landing example shows the 400 it was given');
-  check(window.document.querySelector('input[name="givenBasis"][value="per-group"]').checked, 'Q11: the per-group basis is chosen');
-  check(results().includes('You entered 400 per subgroup (800 in total).'), 'Q11: the size echo appears, in the design\u2019s own word for its parts');
+  check(window.document.querySelector('#q-givenSize').value === '300', 'Q14: the opening example shows the 300 it was given');
+  check(window.document.querySelector('input[name="givenBasis"][value="per-group"]').checked, 'Q14: the per-group basis is chosen');
+  check(results().includes('You entered 300 per group (600 in total).'), 'Q14: the size echo appears');
   check(results().split('At the required size, if the true effect is exactly Δ').length - 1 === 1, 'Q10: the cost line appears once in the results');
   check((window.document.querySelector('#results .number')?.textContent ?? '').includes('At the required size'), 'Q10: the cost line sits under number 1, the required size');
+
+  // Q13: the verdict categories are mutually exclusive — reversal
+  // is a sub-line of "does not hold", the old note under the table
+  // is gone, and every displayed row sums to 100%.
+  const rowSumsOk = () => {
+    const rows = window.document.querySelectorAll('#results table.verdicts tbody tr');
+    if (!rows.length) return false;
+    return [...rows].every((tr) => {
+      const cells = [...tr.querySelectorAll('td')].map((td) => parseFloat(td.textContent));
+      return Math.abs(cells.reduce((s, x) => s + x, 0) - 100) <= 0.1 + 1e-9;
+    });
+  };
+  check(results().includes('(incl.'), 'Q13: reversal shows inside the does-not-hold cell');
+  check(!results().includes('three readings'), 'Q13: the note under the verdict table is gone');
+  check(rowSumsOk(), 'Q13: every displayed verdict row sums to 100% on the plain check');
+
+  // Example 3, behind its button now (Addendum 3): its numbers and
+  // the Addendum 2 landing assertions hold there.
+  window.document.querySelector('button[data-example="ex3"]').click();
+  check(results().includes('2,054 units'), 'example 3: required total 2,054');
+  check(results().includes('8.01 points'), 'example 3: MDE 8.01 points at the given size');
+  check(results().includes('37.6%'), 'example 3: verdict chance 37.6%');
+  check(text('#justification-text').includes('800 units'), 'example 3: justification mentions the given 800 units');
+  check(window.document.querySelector('#q-givenSize').value === '400', 'Q11: example 3 shows the 400 it was given');
+  check(window.document.querySelector('input[name="givenBasis"][value="per-group"]').checked, 'Q11: the per-group basis is chosen');
+  check(results().includes('You entered 400 per subgroup (800 in total).'), 'Q11: the size echo appears, in the design\u2019s own word for its parts');
+  check(results().split('At the required size, if the true effect is exactly Δ').length - 1 === 1, 'Q10: the cost line appears once in the results (example 3)');
   check(results().includes('at most 1.2%'), 'Addendum 2: number 3 states the false-holds figure the verdict table shows');
+  check(rowSumsOk(), 'Q13: every displayed verdict row sums to 100% on example 3');
 
   // Back to a blank check path for the Q1 steps: switching to plan
   // and back resets the check-only questions (and drops the

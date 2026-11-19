@@ -1,6 +1,8 @@
-// The three worked examples from the spec (sections 8-10), as input
-// sets plus the story and the why-lines the page shows with them.
-// The scenario is fictional: a language-learning app compares two hint
+// The worked examples, as input sets plus the story and the
+// why-lines the page shows with them. The page opens on the plain
+// check (decision log #8): the rehearsal's case of an AI-given size,
+// in the plainest design the tool covers. The other three are the
+// spec's (sections 8-10): a language-learning app compares two hint
 // styles on practice exercises, each tried once with each style.
 
 const base = {
@@ -12,6 +14,28 @@ const base = {
 };
 
 export const EXAMPLES = [
+  {
+    id: 'ex4',
+    button: 'Check a plain case',
+    title: 'Example 4 — a plain check (300 students per group)',
+    path: 'check',
+    story: 'A team is planning a course study. They asked an AI assistant how many students to enroll to detect a 4-point rise in the course\u2019s pass rate, and it told them 300 per group. They check that number here, before enrolling anyone.',
+    inputs: {
+      outcome: 'rate', assignment: 'independent', claim: 'main', delta: 0.04,
+      deltaSource: 'substance', deltaSameAdvice: 'no',
+      baseRateChoice: 'unknown', baseRate: null, sd: null, sigma: null,
+      claims: 1, claimsRule: null,
+      alpha: 0.05, sides: 'two', power: 0.8,
+      givenSize: 300, givenBasis: 'per-group',
+      runsPerUnit: 1, subgroups: 'no',
+    },
+    whyLines: [
+      ['What 300 per group buys', 'It reliably finds rises of 11.4 points or more. A 4-point rise, the smallest the team cares about, would be found only 16% of the time; the rest ends inconclusive or worse.'],
+      ['What a 4-point gain needs', '2,453 students per group, 4,906 in all — about eight times the advice. At 300 per group the interval is simply wider than the gain being looked for, so the gap is not a rounding choice.'],
+      ['Why an unknown pass rate costs', 'With the pass rate unknown, the plan assumes 50%, where a yes/no outcome varies most. If the real rate were far from half, the same 4-point gain would need fewer students; not knowing means paying for the worst case.'],
+      ["Power's cost", 'Even at the full 2,453 per group, a real 4-point rise is missed one time in five: that is the 80% power the plan targets. Asking for 90% would halve the miss rate and cost about a third more students.'],
+    ],
+  },
   {
     id: 'ex3',
     button: 'Check a number you were given',

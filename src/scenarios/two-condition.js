@@ -34,10 +34,18 @@ import { GUARDRAILS } from '../copy.js';
 // (DECISIONS #10): an unanswered Δ-source question counts as "not
 // sure" whenever a size is being checked, and the parts of a design
 // go by one word everywhere — "per subgroup" when the design has
-// subgroups, "per group" when it does not.
+// subgroups, "per group" when it does not. Addendum 3 (DECISIONS
+// #11, the owner's own rulings, decision log #7 and #8): the verdict
+// categories the page displays are mutually exclusive — the fourth
+// verdict is carved out of both "holds" and "does not hold", and a
+// reversal is a sub-line of "does not hold" — and the page opens on
+// the plainest check. The partition lives in the display layer
+// (src/copy.js); no input's meaning changed, but the numbers an old
+// link displays in its verdict table are partitioned differently,
+// so the version moves again.
 
 export const id = 'two-condition';
-export const version = 4;
+export const version = 5;
 
 export const questions = [
   { key: 'givenSize', label: 'What size were you given?', kind: 'number',
