@@ -12,43 +12,56 @@
 <header class="masthead">
   <div class="brand">
     <h1>WhyN</h1>
-    <p class="tagline">Were you given a sample size? Check it before you spend anything, or plan one from scratch. Same inputs, same answer, and every number comes with its reason.</p>
+    <p class="tagline">How many units does your experiment need, and why that many? Check a number you were given, or plan one from scratch.</p>
   </div>
-  <details class="examples" id="example-menu">
-    <summary>Try an example</summary>
-    <div id="example-bar" class="example-list" role="group" aria-label="Worked examples">
-      <button type="button" data-example="ex4"><strong>Check</strong> 300 students per group, from an AI</button>
-      <button type="button" data-example="ex3"><strong>Check</strong> 400 exercises per subgroup, paired</button>
-      <button type="button" data-example="ex1"><strong>Plan</strong> a main effect, paired</button>
-      <button type="button" data-example="ex2"><strong>Plan</strong> an interaction, paired</button>
-    </div>
-  </details>
+  <div class="masthead-actions">
+    <button type="button" id="start-over" class="quiet" hidden>Start over</button>
+    <details class="examples" id="example-menu">
+      <summary>Try an example</summary>
+      <div id="example-bar" class="example-list" role="group" aria-label="Worked examples">
+        <button type="button" data-example="ex4"><strong>Check</strong> 300 students per group, from an AI</button>
+        <button type="button" data-example="ex3"><strong>Check</strong> 400 exercises per subgroup, paired</button>
+        <button type="button" data-example="ex1"><strong>Plan</strong> a main effect, paired</button>
+        <button type="button" data-example="ex2"><strong>Plan</strong> an interaction, paired</button>
+      </div>
+    </details>
+  </div>
 </header>
 
 <main>
-  <div class="workspace">
-    <section class="ask" aria-labelledby="ask-h">
-      <h2 id="ask-h" class="visually-hidden">Your design</h2>
-      <fieldset class="path-toggle">
-        <legend class="visually-hidden">What do you want to do?</legend>
-        <label><input type="radio" name="path" value="check" checked><span>Check a number</span></label>
-        <label><input type="radio" name="path" value="plan"><span>Plan from scratch</span></label>
-      </fieldset>
-      <p id="example-story" class="story" hidden></p>
-      <form id="questions" autocomplete="off"></form>
+  <div class="workspace is-start" id="flow">
+    <section class="ask" aria-label="Your experiment">
+      <div class="step step-path">
+        <h2 class="step-title"><span class="step-n" aria-hidden="true">1</span> What do you want to do?</h2>
+        <fieldset class="path-toggle">
+          <legend class="visually-hidden">What do you want to do?</legend>
+          <label><input type="radio" name="path" value="check"><span>Check a sample size</span></label>
+          <label><input type="radio" name="path" value="plan"><span>Plan a sample size</span></label>
+        </fieldset>
+      </div>
+      <div class="step step-experiment">
+        <h2 class="step-title"><span class="step-n" aria-hidden="true">2</span> What does your experiment compare?</h2>
+        <div id="experiment-picker"></div>
+      </div>
+      <div class="step step-details" id="step-details" hidden>
+        <h2 class="step-title"><span class="step-n" aria-hidden="true">3</span> The details</h2>
+        <p id="example-story" class="story" hidden></p>
+        <form id="questions" autocomplete="off"></form>
+      </div>
     </section>
 
-    <aside class="answer" aria-label="The answer">
+    <aside class="answer" id="answer" aria-labelledby="answer-h" hidden>
+      <h2 id="answer-h" class="answer-title">Your answer</h2>
       <div id="results" aria-live="polite"></div>
       <div id="guardrails"></div>
-      <div class="actions">
+      <div class="actions" id="answer-actions">
         <button type="button" id="copy-justification" class="primary">Copy the justification</button>
         <button type="button" id="show-justification" class="quiet">Read it first</button>
       </div>
     </aside>
   </div>
 
-  <section class="more" aria-labelledby="more-h">
+  <section class="more" id="more" aria-labelledby="more-h" hidden>
     <h2 id="more-h">More detail, when you want it</h2>
     <details id="why-details" hidden>
       <summary>Why the example's numbers came out this way</summary>

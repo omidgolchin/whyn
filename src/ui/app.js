@@ -24,11 +24,41 @@ const HINTS = {
 // their values, so nothing pre-filled is out of sight.
 const GROUPS = [
   { id: 'given', title: 'The number you were given', keys: ['givenSize', 'givenBasis'], paths: ['check'] },
-  { id: 'design', title: 'Your design', keys: ['outcome', 'assignment', 'subgroups', 'claim'] },
+  { id: 'design', title: 'Your design', keys: ['subgroups', 'claim'] },
   { id: 'effect', title: 'The effect you care about', keys: ['delta', 'deltaSameAdvice', 'baseRateChoice', 'baseRate', 'sd', 'sigma'] },
   { id: 'claims', title: 'What you will report', keys: ['claims', 'claimsRule'] },
   { id: 'conventions', title: 'Conventions', keys: ['alpha', 'sides', 'power', 'runsPerUnit'], collapsible: true },
 ];
+
+// Step 2: what the experiment compares. Each choice names the tests a
+// researcher already knows it by, and sets the two answers the engine
+// needs (outcome and assignment). Designs WhyN does not size yet are
+// listed too, so nobody sizes an ANOVA with a two-group formula.
+const EXPERIMENTS = [
+  { id: 'rate-independent', outcome: 'rate', assignment: 'independent',
+    title: 'Two separate groups, a yes/no outcome',
+    tests: 'Two-proportion z-test; the same as a chi-square test on a 2×2 table' },
+  { id: 'mean-independent', outcome: 'mean', assignment: 'independent',
+    title: 'Two separate groups, a measurement',
+    tests: 'Two-sample t-test' },
+  { id: 'mean-paired', outcome: 'mean', assignment: 'paired',
+    title: 'The same units under both conditions, a measurement',
+    tests: 'Paired t-test' },
+  { id: 'rate-paired', outcome: 'rate', assignment: 'paired',
+    title: 'The same units under both conditions, a yes/no outcome over repeated tries',
+    tests: 'Paired comparison of rates' },
+];
+const LATER = [
+  { title: 'Three or more groups', tests: 'one-way ANOVA', tool: 'gpower' },
+  { title: 'How two measurements move together', tests: 'correlation, regression slope', tool: 'gpower' },
+  { title: 'Categories across more than two groups', tests: 'chi-square on a larger table', tool: 'gpower' },
+  { title: 'Time until an event', tests: 'log-rank, survival', tool: 'declare' },
+  { title: 'Whole classes, clinics or sites assigned together', tests: 'cluster-randomized', tool: 'declare' },
+];
+const TOOLS = {
+  gpower: '<a href="https://www.psychologie.hhu.de/arbeitsgruppen/allgemeine-psychologie-und-arbeitspsychologie/gpower">G*Power</a> sizes it',
+  declare: '<a href="https://declaredesign.org/">DeclareDesign</a> can simulate it',
+};
 
 // Display conversions: the form speaks in points and percents where a
 // person would; the engine speaks in proportions.
@@ -58,7 +88,8 @@ function stepFor(key, inputs) {
 }
 
 let currentInputs = { ...scenario.defaults() };
-let currentPath = 'check';
+let currentPath = null;
+let pickerOpen = true;
 let currentExampleId = null;
 let conventionsOpen = false;
 const openHints = new Set();
@@ -73,6 +104,12 @@ const storyEl = $('#example-story');
 const whyEl = $('#example-why');
 const whyDetails = $('#why-details');
 const jumpEl = $('#answer-jump');
+const flowEl = $('#flow');
+const pickerEl = $('#experiment-picker');
+const detailsEl = $('#step-details');
+const answerBox = $('#answer');
+const moreEl = $('#more');
+const startOverBtn = $('#start-over');
 
 function applies(question, inputs) {
   if (typeof question.appliesWhen === 'function') return question.appliesWhen(inputs);
@@ -415,7 +452,7 @@ function renderResults(result) {
     if (currentPath === 'check') sub += ' Enter the size you were given to check it against this.';
     jump = `You need ${reqPer}`;
   }
-  parts.push(`<h2 id="results-h" class="headline">${head}</h2>`);
+  parts.push(`<p class="headline">${head}</p>`);
   parts.push(`<p class="subhead">${sub}</p>`);
   parts.push(intervalRuler(result));
 
@@ -514,6 +551,7 @@ function normalized(inputs) {
 }
 
 function render() {
+  if (!ready()) return;
   const result = computePlan({ scenario: scenario.id, inputs: currentInputs });
   writeState(scenario, { inputs: currentInputs, path: currentPath, exampleId: currentExampleId });
   renderExampleChrome();
@@ -521,10 +559,10 @@ function render() {
   const sum = formEl.querySelector('.group-conventions .group-sum');
   if (sum) sum.textContent = conventionsSummary(currentInputs);
   if (!result.ok) {
-    resultsEl.innerHTML = '<h2 id="results-h" class="headline headline-waiting">Answer the questions to see the numbers.</h2>' +
-      '<ul class="problems">' + result.problems
-        .map((p) => `<li class="problem">${esc(p.replace(/^[A-Za-z]+: /, ''))}</li>`).join('') + '</ul>' +
-      '<p class="note">Nothing is calculated until the questions make sense.</p>';
+    resultsEl.innerHTML = '<p class="headline headline-waiting">Your sample size appears here once the details are filled in.</p>' +
+      '<p class="note">Still needed:</p><ul class="problems">' + result.problems
+        .map((p) => { const t = p.replace(/^[A-Za-z]+: /, ''); return `<li class="problem">${esc(t.charAt(0).toUpperCase() + t.slice(1))}</li>`; }).join('') + '</ul>';
+    $('#answer-actions').hidden = true;
     budgetEl.innerHTML = '';
     curveEl.innerHTML = '';
     guardrailsEl.innerHTML = '';
@@ -532,6 +570,7 @@ function render() {
     jumpEl.textContent = 'Some questions still need an answer. See what is missing';
     return;
   }
+  $('#answer-actions').hidden = false;
   renderResults(result);
   placeAnswer();
   budgetExplorer(budgetEl, { inputs: currentInputs, result });
@@ -544,15 +583,91 @@ function render() {
   justifyEl.textContent = result.justification;
 }
 
+function chosenExperiment() {
+  return EXPERIMENTS.find((e) => e.outcome === currentInputs.outcome && e.assignment === currentInputs.assignment) ?? null;
+}
+
+function renderPicker() {
+  const chosen = chosenExperiment();
+  if (chosen && !pickerOpen) {
+    pickerEl.innerHTML = `<div class="exp-chosen"><div><p class="exp-title">${chosen.title}</p>` +
+      `<p class="exp-tests">${chosen.tests}</p></div>` +
+      '<button type="button" class="quiet small" id="change-experiment">Change</button></div>';
+    return;
+  }
+  const rows = EXPERIMENTS.map((e) => `<label class="exp">
+      <input type="radio" name="experiment" value="${e.id}"${chosen && chosen.id === e.id ? ' checked' : ''}>
+      <span class="exp-body"><span class="exp-title">${e.title}</span><span class="exp-tests">${e.tests}</span></span>
+    </label>`).join('');
+  const later = LATER.map((e) => `<li><span class="exp-title">${e.title}</span> <span class="exp-tests">(${e.tests}).</span> ${TOOLS[e.tool]}.</li>`).join('');
+  pickerEl.innerHTML = `<fieldset class="exp-list"><legend class="visually-hidden">What does your experiment compare?</legend>${rows}</fieldset>` +
+    `<details class="later"><summary>Not in WhyN yet: ANOVA, correlation, larger chi-square tables, survival, clusters</summary>` +
+    `<p>WhyN sizes the four designs above. Sizing one of these with them would give the wrong number, so use another tool for now:</p><ul>${later}</ul></details>`;
+}
+
+function ready() {
+  return Boolean(currentPath && chosenExperiment());
+}
+
+// Show only the steps that apply: the start is two questions, the
+// details and the answer appear once both are answered.
+function renderAll() {
+  renderPicker();
+  const r = ready();
+  flowEl.classList.toggle('is-start', !r);
+  detailsEl.hidden = !r;
+  answerBox.hidden = !r;
+  moreEl.hidden = !r;
+  startOverBtn.hidden = !(currentPath || currentInputs.outcome || currentInputs.assignment);
+  if (r) {
+    buildForm();
+    render();
+  } else {
+    jumpEl.hidden = true;
+    jumpEl.textContent = '';
+  }
+  syncJump();
+}
+
+function startOver() {
+  currentInputs = { ...scenario.defaults() };
+  currentPath = null;
+  currentExampleId = null;
+  pickerOpen = true;
+  document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = false; });
+  history.replaceState(null, '', location.pathname);
+  storyEl.hidden = true;
+  renderAll();
+}
+
+pickerEl.addEventListener('change', (event) => {
+  if (event.target.name !== 'experiment') return;
+  const e = EXPERIMENTS.find((x) => x.id === event.target.value);
+  currentInputs.outcome = e.outcome;
+  currentInputs.assignment = e.assignment;
+  const claimQ = scenario.questions.find((q) => q.key === 'claim');
+  if (!applies(claimQ, currentInputs)) currentInputs.claim = null;
+  if (currentPath) pickerOpen = false;
+  renderAll();
+  if (!detailsEl.hidden) detailsEl.querySelector('input')?.focus({ preventScroll: true });
+});
+pickerEl.addEventListener('click', (event) => {
+  if (event.target.id !== 'change-experiment') return;
+  pickerOpen = true;
+  renderPicker();
+  pickerEl.querySelector('input[name="experiment"]:checked')?.focus();
+});
+startOverBtn.addEventListener('click', startOver);
+
 function loadExample(id) {
   const example = EXAMPLES.find((e) => e.id === id);
   if (!example) return;
   currentExampleId = id;
   currentPath = example.path;
   currentInputs = { ...scenario.defaults(), ...example.inputs };
+  pickerOpen = false;
   document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === currentPath; });
-  buildForm();
-  render();
+  renderAll();
   const menu = $('#example-menu');
   if (menu) menu.open = false;
 }
@@ -610,8 +725,8 @@ document.querySelectorAll('input[name="path"]').forEach((r) => {
         if (q.paths && !q.paths.includes('plan')) currentInputs[q.key] = q.default;
       }
     }
-    buildForm();
-    render();
+    if (chosenExperiment()) pickerOpen = false;
+    renderAll();
   });
 });
 
@@ -649,17 +764,19 @@ $('#observed-power').addEventListener('click', () => {
   note.hidden = false;
 });
 
+let syncJump = () => {};
 // On a phone the answer sits below the form; a small bar keeps the
 // answer's first line in reach until the answer itself is on screen.
 if (typeof window.IntersectionObserver === 'function' && window.matchMedia) {
   const narrow = window.matchMedia('(max-width: 59.99rem)');
   let answerVisible = false;
-  const sync = () => { jumpEl.hidden = !narrow.matches || answerVisible; };
+  const sync = () => { jumpEl.hidden = !narrow.matches || answerVisible || !ready() || !jumpEl.textContent; };
   new IntersectionObserver((entries) => {
     answerVisible = entries.some((e) => e.isIntersecting);
     sync();
   }).observe(resultsEl);
   narrow.addEventListener?.('change', sync);
+  syncJump = sync;
   sync();
 }
 
@@ -669,16 +786,14 @@ window.addEventListener('resize', () => {
   resizeTimer = setTimeout(render, 150);
 });
 
-// Start: a shared link wins; otherwise open on the plain check
-// (decision log #8): an AI-given size in the plainest design.
+// Start: a shared link opens on its answer; otherwise the page asks
+// two questions first (decision log #10).
 const fromUrl = readState(scenario);
 if (fromUrl) {
   currentInputs = { ...scenario.defaults(), ...fromUrl.inputs };
   currentPath = fromUrl.path;
   currentExampleId = fromUrl.exampleId;
+  if (chosenExperiment()) pickerOpen = false;
   document.querySelectorAll('input[name="path"]').forEach((r) => { r.checked = r.value === currentPath; });
-  buildForm();
-  render();
-} else {
-  loadExample('ex4');
 }
+renderAll();

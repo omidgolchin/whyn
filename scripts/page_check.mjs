@@ -57,8 +57,37 @@ if (JSDOM) {
   const text = (sel) => window.document.querySelector(sel)?.textContent ?? '';
   const results = () => text('#results');
 
-  // Addendum 3: the page opens on the plain check — an AI-given 300
-  // students per group for a 4-point pass-rate rise (Q14).
+  // The start (decision log #10): two questions, nothing else. No
+  // answer panel, no details and no numbers until both are answered.
+  const doc = window.document;
+  check(doc.querySelector('#answer').hidden, 'start: the answer panel waits for the first two answers');
+  check(doc.querySelector('#step-details').hidden, 'start: the details wait for the first two answers');
+  check(doc.querySelectorAll('#experiment-picker input[name="experiment"]').length === 4, 'start: four experiments to pick from');
+  check(text('#experiment-picker').includes('chi-square') && text('#experiment-picker').includes('t-test'), 'start: the picker names the tests people know');
+  check(text('#experiment-picker').includes('ANOVA') && text('#experiment-picker').includes('correlation'), 'start: the designs not covered yet are named');
+  check(!results().includes('units'), 'start: no numbers before the questions');
+
+  // Answering both opens the details and a waiting answer panel.
+  const pick = (name, value) => {
+    const r = doc.querySelector(`input[name="${name}"][value="${value}"]`);
+    r.checked = true;
+    r.dispatchEvent(new window.Event('change', { bubbles: true }));
+  };
+  pick('path', 'plan');
+  check(doc.querySelector('#answer').hidden, 'start: one answer is not enough');
+  pick('experiment', 'mean-independent');
+  check(!doc.querySelector('#step-details').hidden && !doc.querySelector('#answer').hidden, 'start: both answers open the details and the answer panel');
+  check(text('#answer-h') === 'Your answer', 'the answer panel says what it is');
+  check(results().includes('Still needed'), 'the answer panel names what is still needed');
+  check(text('#experiment-picker').includes('Two-sample t-test') && doc.querySelector('#change-experiment'), 'the chosen experiment folds to one line with a way back');
+  check(!doc.querySelector('#q-outcome') && !doc.querySelector('input[name="outcome"]'), 'the details do not ask again what step 2 answered');
+  doc.querySelector('#start-over').click();
+  check(doc.querySelector('#answer').hidden && !doc.querySelector('input[name="path"]:checked'), 'start over returns to the two questions');
+
+  // Q14 (decision log #10 moved it behind the first example): the
+  // plain check, an AI-given 300 students per group for a 4-point
+  // pass-rate rise, keeps every number it had as the landing page.
+  doc.querySelector('button[data-example="ex4"]').click();
   check(results().includes('4,906 units'), 'Q14: opens on the plain check: required total 4,906');
   check(results().includes('11.44 points'), 'Q14: MDE 11.44 points at the given size');
   check(results().includes('16.4%'), 'Q14: verdict chance 16.4% at delta');

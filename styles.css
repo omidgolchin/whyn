@@ -47,6 +47,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html { -webkit-text-size-adjust: 100%; }
 
@@ -92,6 +93,7 @@ code { font-size: 0.92em; }
 }
 .tagline { margin: 0.35rem 0 0; color: var(--muted); max-width: 40rem; }
 
+.masthead-actions { display: flex; align-items: center; gap: 0.5rem; flex: 0 0 auto; }
 .examples { position: relative; flex: 0 0 auto; }
 .examples > summary {
   list-style: none;
@@ -141,17 +143,89 @@ main { max-width: 76rem; margin: 0 auto; padding: 0 1.25rem 2rem; }
   gap: 1.5rem;
   margin-top: 1rem;
 }
+.workspace.is-start { max-width: 44rem; }
 @media (min-width: 60rem) {
-  .workspace { grid-template-columns: minmax(0, 27rem) minmax(0, 1fr); gap: 2.5rem; align-items: start; }
+  .workspace:not(.is-start) { grid-template-columns: minmax(0, 27rem) minmax(0, 1fr); gap: 2.5rem; align-items: start; }
   .answer { position: sticky; top: 1rem; }
 }
+
+/* The steps. */
+.step + .step { margin-top: 1.75rem; }
+.step-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+.step-n {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 600 0.9rem/1 var(--sans);
+}
+
+/* Step 2: the experiment picker. */
+.exp-list { border: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.exp { position: relative; display: block; cursor: pointer; }
+.exp input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.exp-body {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.7rem 0.9rem 0.7rem 2.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  position: relative;
+}
+.exp-body::before {
+  content: "";
+  position: absolute;
+  left: 0.95rem;
+  top: 0.95rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 2px solid var(--faint);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.exp:hover .exp-body { border-color: var(--accent); }
+.exp input:checked + .exp-body { border-color: var(--accent); background: var(--panel); }
+.exp input:checked + .exp-body::before { border: 5px solid var(--accent); }
+.exp input:focus-visible + .exp-body { outline: 3px solid var(--accent); outline-offset: 2px; }
+.exp-title { font-weight: 600; }
+.exp-tests { color: var(--muted); font-size: 0.92rem; }
+.exp-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.exp-chosen p { margin: 0; }
+.exp-chosen .exp-title { display: block; }
+.later { margin-top: 0.75rem; font-size: 0.92rem; }
+.later summary { cursor: pointer; color: var(--muted); }
+.later p { margin: 0.5rem 0 0.25rem; }
+.later ul { margin: 0; padding-left: 1.1rem; }
+.later li { margin: 0.3rem 0; }
+button.small { padding: 0.3rem 0.8rem; font-size: 0.9rem; }
 
 /* The two ways in: a segmented control. */
 .path-toggle {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0;
-  margin: 0 0 1rem;
+  margin: 0;
   padding: 0.25rem;
   border: none;
   border-radius: 999px;
@@ -280,6 +354,12 @@ main { max-width: 76rem; margin: 0 auto; padding: 0 1.25rem 2rem; }
   border-radius: 14px;
   padding: 1.4rem 1.5rem 1.25rem;
 }
+.answer-title {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  font-weight: 650;
+  color: var(--accent);
+}
 .headline {
   margin: 0;
   font-family: var(--serif);
@@ -288,10 +368,10 @@ main { max-width: 76rem; margin: 0 auto; padding: 0 1.25rem 2rem; }
   font-weight: 700;
   letter-spacing: -0.005em;
 }
-.headline-waiting { font-size: 1.5rem; }
+.headline-waiting { font-size: 1.35rem; }
 .subhead { margin: 0.6rem 0 0; max-width: 40rem; }
 .problems { margin: 0.75rem 0 0; padding-left: 1.1rem; }
-.problem { color: var(--false); margin: 0.25rem 0; }
+.problem { margin: 0.25rem 0; }
 .note { color: var(--muted); }
 
 /* The interval ruler. */
@@ -462,4 +542,9 @@ footer {
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; }
+}
+
+@media (max-width: 30rem) {
+  .path-toggle span { padding: 0.5rem 0.35rem; font-size: 0.93rem; }
+  .step-title { font-size: 1.05rem; }
 }

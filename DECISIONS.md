@@ -322,3 +322,38 @@ option was taken and is recorded here.
       tests or the page check: 45 of 45 tests and every page-check
       line pass as they were. The scenario version stays 6, since
       no input or number changed.
+
+14. **A guided start (2026-11-19).** Asked for by the owner after #13
+    went live: the first visit was still overwhelming, it was not
+    clear where the answer would appear, and there was no place to
+    pick the experiment itself (chi-square, ANOVA, correlation).
+    Done by Claude, in the page layer only.
+    - The page now opens on two questions and nothing else: what you
+      want to do (check or plan a sample size), and what the
+      experiment compares. The details and the answer appear once
+      both are answered. A shared link still opens on its answer.
+      This supersedes the owner's decision log #8 (open on the plain
+      check example): the example stays, first in "Try an example".
+    - Step 2 is the experiment picker. Each choice is a design in
+      plain words with the test names people know it by: two
+      separate groups and a yes/no outcome (two-proportion z-test,
+      the same as chi-square on a 2×2 table); two separate groups
+      and a measurement (two-sample t-test); the same units under
+      both conditions and a measurement (paired t-test); the same
+      units under both conditions and a yes/no outcome over repeated
+      tries (paired comparison of rates). It sets the outcome and
+      assignment answers, so the details no longer ask them. This
+      settles the decision log's open proposal to organize by design
+      with test names as aliases.
+    - Designs WhyN does not size yet are named under the picker
+      (ANOVA, correlation, larger chi-square tables, survival,
+      clusters), each with a tool that does, because sizing them with
+      a two-condition formula would give the wrong number.
+    - The answer panel is titled "Your answer". Until the details
+      are complete it says what is still needed, and the copy
+      buttons wait.
+    - Page check: the start screen is checked (no numbers, the
+      picker, the test names, the uncovered designs, start over).
+      Q14's numbers are unchanged and now run behind the example's
+      button. No change to src/core, the scenario, the copy library
+      or the tests: 45 of 45 pass.
