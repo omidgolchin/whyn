@@ -85,10 +85,13 @@ export function budgetExplorer(container, ctx) {
     const x1 = W - 8;
     const y = 18;
     const h = 34;
-    const total = Math.max(zA + zB, ratio);
+    // Below 50% power z_b is negative: the budget does not even cover
+    // the false-alarm part, and the miss part has no length to draw.
+    const zBShown = Math.max(0, zB);
+    const total = Math.max(zA + zBShown, ratio);
     const unit = (x1 - x0) / (total * 1.02);
     const wA = zA * unit;
-    const wB = zB * unit;
+    const wB = zBShown * unit;
     svg.appendChild(el('rect', { x: x0, y, width: wA, height: h, class: 'bar-false' }));
     svg.appendChild(el('rect', { x: x0 + wA, y, width: wB, height: h, class: 'bar-miss' }));
     if (ratio > zA + zB + 1e-9) {
@@ -101,8 +104,8 @@ export function budgetExplorer(container, ctx) {
       `your size buys ${ratio.toFixed(2)} SE`));
     svg.appendChild(el('text', { x: x0 + 2, y: y + h + 18, class: 'bar-label' },
       `false alarms: z_a = ${zA.toFixed(2)}`));
-    svg.appendChild(el('text', { x: x0 + wA + 2, y: y + h + 18, class: 'bar-label' },
-      `misses: z_b = ${zB.toFixed(2)}`));
+    svg.appendChild(el('text', { x: Math.min(x0 + wA + 2, W - 190), y: y + h + 18, class: 'bar-label' },
+      zB > 0 ? `misses: z_b = ${zB.toFixed(2)}` : 'misses: more likely than not'));
     if (ratio > zA + zB + 1e-9) {
       svg.appendChild(el('text', { x: x0 + (zA + zB) * unit + 2, y: y + h + 18, class: 'bar-label' }, 'to spare'));
     }
@@ -181,7 +184,7 @@ export function verdictCurve(container, ctx) {
   container.appendChild(title);
   const intro = document.createElement('p');
   intro.textContent = `How a study of ${focus.totalUnits.toLocaleString('en-US')} units would read, for each true effect. ` +
-    'The table under the four numbers gives the same chances at 0, Δ/2 and Δ.';
+    'The table behind the “holds” figure gives the same chances at 0, Δ/2 and Δ.';
   container.appendChild(intro);
 
   const W = 660;

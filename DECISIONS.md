@@ -281,3 +281,44 @@ option was taken and is recorded here.
       above it — a setting the page offers — now reads the
       partitioned chances where before it read the overlapping
       ones, so by the rule of #10 and #11 the version moves.
+
+13. **The page, compacted (2026-11-19).** Asked for by the owner:
+    the live page was daunting on a first visit and its information
+    was disorganized. Done by Claude, in the page layer only.
+    - Layout: the form and the answer sit side by side on wide
+      screens (the answer sticks beside the form) and stack on a
+      phone, where a small bar keeps the answer's first line in
+      reach. The page went from about 6,400 px to 1,800 px tall on
+      a desktop, and from 8,400 px to 3,200 px on a phone.
+    - The answer leads with one sentence ("Too small to find an
+      effect of 4 points.", "You need 2,453 per group.") built from
+      the result's own numbers, then the size echo and the next
+      step for a checker.
+    - Explanations open on request: every question and every figure
+      has an info button, and the verdict table sits behind the
+      "holds" figure's. Their text stays in the page, closed, so it
+      can be found and read aloud. Two lines stay in sight because
+      the rehearsal showed they are missed otherwise: power's cost
+      under the required size (#9) and the assumption line (#8).
+    - The conventional settings (error rate, sides, power, runs)
+      sit in a closed group whose summary names their values, so
+      nothing pre-filled is out of sight.
+    - Everything else (the example's why-lines, the error budget
+      and verdict curve, the justification, observed power, how it
+      works) is one disclosure each under "More detail". The copy
+      button stays in the answer. Examples moved into one "Try an
+      example" menu.
+    - One addition: an interval ruler in the answer. It draws the
+      interval a typical result would have if the true effect were
+      exactly Δ, at the entered size and at the required size, from
+      the result's own z_a and standard errors. It is the picture of
+      why a small study reads as inconclusive. Nothing new is
+      computed.
+    - A fix found on the way: the error-budget bar drew a negative
+      width below 50% power (the plain check sits at 16%). The miss
+      part now has no length there and is labelled "more likely
+      than not".
+    - No change to src/core, the scenario, the copy library, the
+      tests or the page check: 45 of 45 tests and every page-check
+      line pass as they were. The scenario version stays 6, since
+      no input or number changed.
