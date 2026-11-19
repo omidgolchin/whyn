@@ -133,7 +133,8 @@ test('Q5: the cost of power is stated wherever power is shown', () => {
   // size the formula asks for. Pinned against the reference script
   // (outcome_probs at the target SE, one claim, 5% two-sided): at 80%
   // power, inconclusive 0.175000 and doesNotHold 0.025000; at 90%,
-  // 0.075000 and 0.025000.
+  // 0.075000 and 0.025000. The line opens by naming the required size
+  // (Addendum 2); the figures are the addendum's, unchanged.
   const split = (power) => {
     const { tail } = alphaPerClaim({ alpha: 0.05, claims: 1, sides: 'two' });
     const zA = invNorm(1 - tail);
@@ -142,11 +143,11 @@ test('Q5: the cost of power is stated wherever power is shown', () => {
   };
   assert.equal(
     powerCostLine(0.8, split(0.8)),
-    'If the true effect is exactly Δ, 20% of studies end without holds: 17.5% inconclusive, 2.5% does not hold.',
+    'At the required size, if the true effect is exactly Δ, 20% of studies end without holds: 17.5% inconclusive, 2.5% does not hold.',
   );
   assert.equal(
     powerCostLine(0.9, split(0.9)),
-    'If the true effect is exactly Δ, 10% of studies end without holds: 7.5% inconclusive, 2.5% does not hold.',
+    'At the required size, if the true effect is exactly Δ, 10% of studies end without holds: 7.5% inconclusive, 2.5% does not hold.',
   );
 });
 

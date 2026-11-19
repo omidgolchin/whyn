@@ -30,17 +30,21 @@ import { GUARDRAILS } from '../copy.js';
 // the size as `givenSize` plus a required per-group-or-in-total choice
 // (`givenBasis`) and validate() translates. `givenUnits` stays a
 // question-shaped input (never rendered) so links shared before the
-// ruling keep the meaning they were created with.
+// ruling keep the meaning they were created with. Addendum 2
+// (DECISIONS #10): an unanswered Δ-source question counts as "not
+// sure" whenever a size is being checked, and the parts of a design
+// go by one word everywhere — "per subgroup" when the design has
+// subgroups, "per group" when it does not.
 
 export const id = 'two-condition';
-export const version = 3;
+export const version = 4;
 
 export const questions = [
   { key: 'givenSize', label: 'What size were you given?', kind: 'number',
     default: null, copyKey: 'given_number', paths: ['check'] },
   { key: 'givenBasis', label: 'Is that size per group, or in total?', kind: 'choice',
     options: [
-      { value: 'per-group', label: 'per group' },
+      { value: 'per-group', label: (inputs) => (inputs.assignment === 'paired' && inputs.subgroups === 'yes' ? 'per subgroup' : 'per group') },
       { value: 'total', label: 'in total' },
     ],
     default: null, copyKey: null, paths: ['check'] },
@@ -82,7 +86,9 @@ export const questions = [
     default: null, copyKey: 'base_rate', appliesTo: { outcome: 'rate' } },
   { key: 'baseRate', label: 'Rate under the first condition', kind: 'number',
     default: null, copyKey: 'base_rate', appliesTo: { outcome: 'rate', baseRateChoice: 'known' } },
-  { key: 'sd', label: 'Standard deviation of the outcome', kind: 'number',
+  { key: 'sd', label: (inputs) => (inputs.assignment === 'paired'
+      ? "Standard deviation of each unit's difference between conditions"
+      : 'Standard deviation of the outcome'), kind: 'number',
     default: null, copyKey: null, appliesTo: { outcome: 'mean' } },
   { key: 'sigma', label: 'How much does the effect vary between units? (spread of the effect)', kind: 'number',
     default: null, copyKey: 'spread', appliesTo: { outcome: 'rate', assignment: 'paired' } },
@@ -136,14 +142,26 @@ export function validate(raw) {
   // advice as the size?") replaces the old "where does that effect come
   // from?". Yes or not sure means an assumption came from the same
   // advice as the number, which is what the core's independence
-  // guardrail reads (as deltaSource: 'advice'). Inputs that name a
-  // deltaSource directly (the worked examples, the guardrail tests)
-  // keep it untouched.
-  if (inputs.deltaSource == null) inputs.deltaSource = 'substance';
+  // guardrail reads (as deltaSource: 'advice'). An answered question
+  // is the researcher's own word and settles the source either way.
+  // Inputs that name a deltaSource directly (the worked examples, the
+  // guardrail tests) keep it when the question was never answered.
   if (inputs.deltaSameAdvice === 'yes' || inputs.deltaSameAdvice === 'unsure') {
     inputs.deltaSource = 'advice';
   } else if (inputs.deltaSameAdvice === 'no') {
     inputs.deltaSource = 'substance';
+  } else if (inputs.deltaSource == null) {
+    // The question is unanswered and no source was named. When a size
+    // is being checked, silence counts as "not sure" (Addendum 2):
+    // the guardrail fires and the assumption line names it, rather
+    // than the blank silently counting as "no". With no size to
+    // check, the question was never in play and the default stands.
+    if (inputs.givenSize != null || inputs.givenUnits != null) {
+      inputs.deltaSource = 'advice';
+      inputs.deltaSourceUnanswered = true;
+    } else {
+      inputs.deltaSource = 'substance';
+    }
   }
 
   // The check path asks the size with a required per-group-or-in-total
@@ -337,6 +355,12 @@ export function assumptionLine(inputs, fmt) {
   items.push(inputs.runsPerUnit === 1 ? '1 run' : `${inputs.runsPerUnit} runs`);
   if (inputs.assignment === 'paired') {
     items.push(inputs.subgroups === 'yes' ? 'two equal subgroups' : 'no subgroups');
+  }
+  if (inputs.deltaSourceUnanswered) {
+    // The Δ-source question was left blank on a checked size, so it
+    // counts as "not sure" (Addendum 2) — named here like every other
+    // value the page took on the researcher's behalf.
+    items.push('Δ source: not stated, treated as not sure');
   }
   return items;
 }

@@ -67,6 +67,23 @@ if (JSDOM) {
   check(results().includes('20% of studies end without holds'), 'Q5: the cost of 80% power is stated in the results');
   check(text('#justification-text').includes('20% of studies end without holds'), 'Q8: the justification states the cost of power too');
 
+  // Addendum 2, on the landing example as it opens.
+  check(window.document.querySelector('#q-givenSize').value === '400', 'Q11: the landing example shows the 400 it was given');
+  check(window.document.querySelector('input[name="givenBasis"][value="per-group"]').checked, 'Q11: the per-group basis is chosen');
+  check(results().includes('You entered 400 per subgroup (800 in total).'), 'Q11: the size echo appears, in the design\u2019s own word for its parts');
+  check(results().split('At the required size, if the true effect is exactly Δ').length - 1 === 1, 'Q10: the cost line appears once in the results');
+  check((window.document.querySelector('#results .number')?.textContent ?? '').includes('At the required size'), 'Q10: the cost line sits under number 1, the required size');
+  check(results().includes('at most 1.2%'), 'Addendum 2: number 3 states the false-holds figure the verdict table shows');
+
+  // Back to a blank check path for the Q1 steps: switching to plan
+  // and back resets the check-only questions (and drops the
+  // example's engine-level deltaSource, which the questions replace).
+  const pathRadio = (v) => window.document.querySelector(`input[name="path"][value="${v}"]`);
+  pathRadio('plan').checked = true;
+  pathRadio('plan').dispatchEvent(new window.Event('change', { bubbles: true }));
+  pathRadio('check').checked = true;
+  pathRadio('check').dispatchEvent(new window.Event('change', { bubbles: true }));
+
   const sizeInput = window.document.querySelector('#q-givenSize');
   sizeInput.value = '300';
   sizeInput.dispatchEvent(new window.Event('input', { bubbles: true }));
@@ -75,6 +92,8 @@ if (JSDOM) {
   basisRadio.checked = true;
   basisRadio.dispatchEvent(new window.Event('change', { bubbles: true }));
   check(results().includes('You entered 300 in total'), 'Q1: choosing the basis runs the check and echoes the size as entered');
+  check(text('#guardrails').includes('only as independent as its inputs'), 'Q12: an unanswered Δ-source fires the independence guardrail');
+  check(results().includes('Δ source: not stated, treated as not sure'), 'Q12: the assumption line names the unanswered Δ-source');
   check(window.location.search.includes('s=two-condition'), 'URL state is written');
   check(window.document.querySelector('#budget').getElementsByTagName('svg').length >= 1, 'budget bar drawn');
   check(window.document.querySelector('#curve').getElementsByTagName('path').length >= 3, 'verdict curve drawn');

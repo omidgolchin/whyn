@@ -99,10 +99,14 @@ export const GUARDRAILS = {
 };
 
 // What the chosen power costs, stated wherever power is shown — in
-// the results and in the justification alike (2026-11-18 ruling, as
-// corrected by its addendum). The first figure is 1 − power; the
-// split is the verdict chances at a true effect of exactly Δ, worked
-// out by the caller from the plan's own numbers: the share that ends
+// the results (once, under number 1, the required size) and in the
+// justification alike (2026-11-18 ruling, as corrected by its
+// addendum; placement and opening settled by Addendum 2). The line
+// is computed at the required size, so it names that size: the
+// verdict chances beside an entered size are a different, larger
+// set of numbers. The first figure is 1 − power; the split is the
+// verdict chances at a true effect of exactly Δ, worked out by the
+// caller from the plan's own numbers: the share that ends
 // inconclusive and the share whose interval excludes effects of Δ or
 // more. Whole percentages print without a decimal, as in the
 // ruling's example ("20%", "17.5%", "2.5%").
@@ -112,5 +116,5 @@ function pct1(x) {
 }
 
 export function powerCostLine(power, { inconclusive, doesNotHold }) {
-  return `If the true effect is exactly Δ, ${pct1(1 - power)} of studies end without holds: ${pct1(inconclusive)} inconclusive, ${pct1(doesNotHold)} does not hold.`;
+  return `At the required size, if the true effect is exactly Δ, ${pct1(1 - power)} of studies end without holds: ${pct1(inconclusive)} inconclusive, ${pct1(doesNotHold)} does not hold.`;
 }

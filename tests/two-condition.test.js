@@ -5,10 +5,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { alphaPerClaim } from '../src/core/multiplicity.js';
-import { budgetK, mdeAt } from '../src/core/budget.js';
+import { budgetK, mdeAt, verdictChances } from '../src/core/budget.js';
 import { invNorm, normCdf } from '../src/core/normal.js';
+import { powerCostLine } from '../src/copy.js';
 import * as scenario from '../src/scenarios/two-condition.js';
 import { computePlan } from '../src/core/plan.js';
+import { EXAMPLES } from '../src/ui/examples.js';
 
 function close(actual, expected, tol, label) {
   assert.ok(
@@ -342,7 +344,7 @@ test('Q8: the justification states the cost of power', () => {
   const result = plan(oneClaim);
   assert.ok(
     result.justification.includes(
-      'If the true effect is exactly Δ, 20% of studies end without holds: 17.5% inconclusive, 2.5% does not hold.',
+      'At the required size, if the true effect is exactly Δ, 20% of studies end without holds: 17.5% inconclusive, 2.5% does not hold.',
     ),
     result.justification,
   );
@@ -356,8 +358,84 @@ test('Q9: at 90% power the cost line reads 10%: 7.5% inconclusive, 2.5% does not
   const result = plan({ ...oneClaim, power: 0.9 });
   assert.ok(
     result.justification.includes(
-      'If the true effect is exactly Δ, 10% of studies end without holds: 7.5% inconclusive, 2.5% does not hold.',
+      'At the required size, if the true effect is exactly Δ, 10% of studies end without holds: 7.5% inconclusive, 2.5% does not hold.',
     ),
     result.justification,
   );
+});
+
+// --- Addendum 2, after the live repo was checked: rows Q10-Q12 --------
+
+test('Q10: the cost line names the required size and matches the verdict chances there', () => {
+  // In the check path (q2base: one claim, 5% two-sided, 80% power)
+  // the line is the plan's own verdict chances at Δ at the standard
+  // error the formula asks for, stated once, under the required size.
+  const result = plan(q2base);
+  const atRequired = verdictChances({
+    effect: result.inputs.delta, se: result.inputs.delta / result.K,
+    delta: result.inputs.delta, zA: result.zA,
+  });
+  const line = powerCostLine(result.inputs.power, {
+    inconclusive: atRequired.inconclusive,
+    doesNotHold: atRequired.doesNotHold - atRequired.both,
+  });
+  assert.equal(
+    line,
+    'At the required size, if the true effect is exactly Δ, 20% of studies end without holds: 17.5% inconclusive, 2.5% does not hold.',
+  );
+  assert.ok(line.startsWith('At the required size, if the true effect is exactly Δ'), line);
+  // Once in the justification; the results-side placement (once,
+  // under number 1) is pinned by the page check's boot assertions.
+  assert.equal(result.justification.split(line).length - 1, 1, result.justification);
+});
+
+test('Q11: example 3 enters the size its story tells, and its numbers do not move', () => {
+  const ex3 = EXAMPLES.find((e) => e.id === 'ex3');
+  assert.equal(ex3.inputs.givenSize, 400);
+  assert.equal(ex3.inputs.givenBasis, 'per-group');
+  assert.equal(ex3.inputs.deltaSameAdvice, 'no');
+  assert.equal(ex3.inputs.givenUnits, undefined);
+  // 400 per subgroup across two subgroups is the same 800 in total
+  // the example always checked: row 16's numbers, unchanged.
+  const result = plan({ ...scenario.defaults(), ...ex3.inputs });
+  assert.equal(result.given.totalUnits, 800);
+  close(100 * result.given.mde, 8.01, 0.01, 'Q11 MDE at the given size');
+  close(result.given.verdicts.delta.holds, 0.376, 0.001, 'Q11 holds at delta');
+  // The echo speaks in the design's own word for its parts: this
+  // design has subgroups, so "per subgroup" — the same word the
+  // basis option and the story use.
+  const echoFmt = { num: (x) => Number(x.toFixed(2)).toLocaleString('en-US') };
+  assert.equal(
+    scenario.sizeEcho(result.inputs, echoFmt),
+    'You entered 400 per subgroup (800 in total).',
+  );
+  const basisQ = scenario.questions.find((q) => q.key === 'givenBasis');
+  const perGroup = basisQ.options.find((o) => o.value === 'per-group');
+  assert.equal(perGroup.label(result.inputs), 'per subgroup');
+  assert.equal(perGroup.label({ assignment: 'independent', subgroups: 'no' }), 'per group');
+  assert.ok(ex3.story.includes('400 per subgroup'), ex3.story);
+});
+
+test('Q12: an unanswered Δ-source counts as "not sure" on a checked size', () => {
+  const fmt = { pct: (x, digits = 1) => `${(100 * x).toFixed(digits)}%` };
+  const unanswered = plan({ ...q2base, deltaSameAdvice: null });
+  assert.equal(unanswered.inputs.deltaSource, 'advice');
+  assert.ok(
+    unanswered.guardrails.map((g) => g.id).includes('sameSource'),
+    JSON.stringify(unanswered.guardrails),
+  );
+  const line = scenario.assumptionLine(unanswered.inputs, fmt).join(' · ');
+  assert.ok(line.includes('Δ source: not stated, treated as not sure'), line);
+  // A size named directly (a pre-ruling link) is a check too.
+  const viaUnits = plan({ ...example1, deltaSource: undefined, givenUnits: 800 });
+  assert.equal(viaUnits.inputs.deltaSource, 'advice');
+  // With no size to check, the question was never in play: the
+  // default stands and nothing fires.
+  const noCheck = plan(oneClaim);
+  assert.equal(noCheck.inputs.deltaSource, 'substance');
+  assert.ok(!noCheck.guardrails.map((g) => g.id).includes('sameSource'));
+  // A source named directly still wins over the blank.
+  const named = plan({ ...q2base, deltaSameAdvice: null, deltaSource: 'substance' });
+  assert.equal(named.inputs.deltaSource, 'substance');
+  assert.ok(!named.guardrails.map((g) => g.id).includes('sameSource'));
 });

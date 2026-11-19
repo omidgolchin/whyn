@@ -87,12 +87,17 @@ function buildForm() {
     const wrap = document.createElement('div');
     wrap.className = 'field' + (q.key === 'givenSize' && currentPath === 'check' ? ' field-first' : '');
     const id = `q-${q.key}`;
+    // A label may be a function of the current answers (the SD of a
+    // paired design is the SD of each unit's difference; the parts of
+    // a design with subgroups are subgroups, not groups).
+    const labelText = typeof q.label === 'function' ? q.label(currentInputs) : q.label;
     if (q.kind === 'choice') {
       const fs = document.createElement('fieldset');
       const legend = document.createElement('legend');
-      legend.textContent = q.label;
+      legend.textContent = labelText;
       fs.appendChild(legend);
       for (const opt of q.options) {
+        const optLabel = typeof opt.label === 'function' ? opt.label(currentInputs) : opt.label;
         const lab = document.createElement('label');
         lab.className = 'radio';
         const input = document.createElement('input');
@@ -100,14 +105,14 @@ function buildForm() {
         input.name = q.key;
         input.value = opt.value;
         input.checked = currentInputs[q.key] === opt.value;
-        lab.append(input, document.createTextNode(` ${opt.label}`));
+        lab.append(input, document.createTextNode(` ${optLabel}`));
         fs.appendChild(lab);
       }
       wrap.appendChild(fs);
     } else {
       const lab = document.createElement('label');
       lab.htmlFor = id;
-      lab.textContent = q.label;
+      lab.textContent = labelText;
       const input = document.createElement('input');
       input.type = 'number';
       input.id = id;
@@ -208,13 +213,16 @@ function renderResults(result) {
     const echo = scenario.sizeEcho(result.inputs, { num: fmtNum });
     if (echo) parts.push(`<p class="note">${echo}</p>`);
   }
-  // 1. Required size.
+  // 1. Required size. The cost of the chosen power is computed at
+  // this size, so the line sits here, once (Addendum 2) — beside the
+  // entered size it contradicted the verdict table below it.
   let why1 = `Unrounded: ${fmtNum(req.total)} units. ${COPY.rounding.text}`;
   if (result.given) {
     why1 += result.given.totalUnits < req.total
       ? ` Your entered size is ${(req.total - result.given.totalUnits).toLocaleString('en-US', { maximumFractionDigits: 0 })} units short of it. Ask whoever gave you this number which Δ, base rate or SD, error rate and power they assumed.`
       : ' Your entered size covers it.';
   }
+  why1 += ` ${powerCost(result)}`;
   parts.push(`<div class="number"><h3>1 · Required sample size</h3>
     <p class="big">${req.roundedTotal.toLocaleString('en-US')} units <span class="sub">(${req.roundedPerPart.toLocaleString('en-US')} ${result.units.partName})</span></p>
     <p class="why">${why1}</p></div>`);
@@ -223,12 +231,13 @@ function renderResults(result) {
   if (focusIsGiven && focus.mde > result.inputs.delta) {
     why2 += ` That is larger than your Δ of ${effectText(result.inputs.delta, result)}: this size can only find effects bigger than the ones you care about.`;
   }
-  why2 += ` ${powerCost(result)}`;
   parts.push(`<div class="number"><h3>2 · Minimum detectable effect at ${focusLabel}</h3>
     <p class="big">${effectText(focus.mde, result)}</p>
     <p class="why">${why2}</p></div>`);
-  // 3. Interval level.
-  const tailPct = fmtPct(result.inputs.sides === 'one' ? result.alphaPerClaim : result.alphaPerClaim / 2);
+  // 3. Interval level. The false-"holds" figure is the verdict
+  // table's own holds chance at a true effect of 0, formatted by the
+  // same function, so the two always agree (Addendum 2).
+  const tailPct = fmtPct(focus.verdicts.zero.holds);
   parts.push(`<div class="number"><h3>3 · Interval level</h3>
     <p class="big">${fmtNum(100 * result.intervalLevel)}% <span class="sub">per claim</span></p>
     <p class="why">Family error rate ${fmtPct(result.inputs.alpha, 0)} split across ${result.inputs.claims} claim(s) (Bonferroni), ${fmtPct(result.alphaPerClaim)} each; a false "holds" in the predicted direction is at most ${tailPct} per claim.</p></div>`);
@@ -240,7 +249,6 @@ function renderResults(result) {
   if (typeof scenario.assumptionLine === 'function') {
     const items = scenario.assumptionLine(result.inputs, { pct: fmtPct });
     parts.push(`<p class="assumed">Assumed: ${items.join(' · ')}.</p>`);
-    parts.push(`<p class="why">${powerCost(result)}</p>`);
   }
   // Floor and runs.
   if (result.floor || (result.runs && (!result.runs.feasible || result.runs.runsPerUnit > 1.05))) {
@@ -334,6 +342,11 @@ formEl.addEventListener('change', (event) => {
 document.querySelectorAll('input[name="path"]').forEach((r) => {
   r.addEventListener('change', () => {
     currentPath = r.value;
+    // The worked examples name an engine-level deltaSource. The
+    // questions replace it — the check path asks the Δ-source
+    // question itself — so a hand path switch drops it rather than
+    // letting it answer that question silently (Addendum 2).
+    delete currentInputs.deltaSource;
     if (currentPath === 'plan') {
       // The check-only questions belong to the check path; leaving
       // their answers in place would check a size the planning path

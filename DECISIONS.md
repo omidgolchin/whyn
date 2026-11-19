@@ -142,3 +142,55 @@ option was taken and is recorded here.
      default now opens with the claim unanswered rather than
      computing on a silent "main" — the addendum's intent, as with
      the defaults the ruling itself retired in #8.
+
+10. **Addendum 2 to the ruling (2026-11-18).** Ruled by Claude
+    after cloning the shipped repo (`ca260ca`), running all 38
+    tests and the page check, and probing the landing page;
+    applied on the owner's proceed the same day. Four fixes, all
+    in the questions, the copy and the rendering — the math, the
+    17 rows and Q1–Q9's figures untouched:
+    - The cost-of-power line sits once in the results, under
+      number 1 (the required size), and opens "At the required
+      size, if the true effect is exactly Δ…". The justification
+      uses the same opening — the line is shared copy, so one
+      wording serves both. Before, it was computed at the required
+      size but printed under the entered size and again under the
+      assumption line, where on the landing page it read 20%
+      beside a table showing 62.4% at the entered 800; the ruling
+      had said "wherever power is shown" without saying which
+      size. Q5, Q8 and Q9 pin the new opening; their numbers are
+      unchanged.
+    - Example 3 enters its size as its story tells it — givenSize
+      400, per-group basis, Δ-source "no" — instead of a hidden
+      givenUnits: 800 behind a blank question. 400 across two
+      subgroups is the same 800 in total, so its numbers (MDE
+      8.01 points, holds 37.6% at Δ) do not move; the question
+      renders answered and the size echo appears. One word for
+      the parts everywhere: the basis option, the echo and the
+      story say "per subgroup" when the design has subgroups and
+      "per group" when it does not. (Q11's "per group chosen"
+      names the basis choice; the landing design has subgroups,
+      so its option reads "per subgroup".)
+    - An unanswered Δ-source question counts as "not sure" when
+      a size is being checked: validate() no longer lets the
+      blank fall through to "substance", the independence
+      guardrail fires, and the assumption line names it ("Δ
+      source: not stated, treated as not sure"). A deltaSource
+      named directly in the inputs still stands, as before, and
+      with no size to check the question was never in play. On
+      the page, a hand path switch drops an example's
+      engine-level deltaSource, so it cannot answer the question
+      silently either.
+    - The paired-means SD question's label says what the engine
+      already means — "the SD of each unit's difference between
+      conditions" — and number 3's false-holds figure is the
+      verdict table's own holds chance at a true effect of 0,
+      formatted by the same function, so the two agree (1.2%,
+      not 1.3%, for the same 1.25%).
+    - Rows Q10–Q12 were added as named tests. The scenario
+      version is now 4: a check link shared before this change
+      that names a size but no Δ-source now fires the guardrail
+      and names the assumption, where before the blank silently
+      counted as "no".
+    The reversal column and the choice of landing example still
+    wait for the owner's own ruling and are untouched.

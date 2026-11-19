@@ -17,10 +17,10 @@ export const EXAMPLES = [
     button: 'Check a number you were given',
     title: 'Example 3 — checking a number you were given',
     path: 'check',
-    story: 'Before using WhyN, the team asked an AI assistant how many exercises to test, and it recommended 400 per group (800 in all). They enter that number first, then the same design and settings as example 1.',
-    inputs: { ...base, givenUnits: 800 },
+    story: 'Before using WhyN, the team asked an AI assistant how many exercises to test, and it recommended 400 per subgroup (800 in all). They enter that number first, then the same design and settings as example 1.',
+    inputs: { ...base, givenSize: 400, givenBasis: 'per-group', deltaSameAdvice: 'no' },
     whyLines: [
-      ['What your number buys', '400 per group reliably finds gains of 8 points or more. A 5-point gain, the smallest the team cares about, would be found only 38% of the time.'],
+      ['What your number buys', '400 per subgroup reliably finds gains of 8 points or more. A 5-point gain, the smallest the team cares about, would be found only 38% of the time.'],
       ['Why inconclusive dominates', 'at this size the interval is wider than the gap between 0 and Δ, so most results cannot tell a 5-point gain from none.'],
       ['What would make 400 right', 'a Δ of 8 points. If the team would act only on gains that large, the number is fine; the tool says so rather than calling the number wrong.'],
       ['Why the two answers differ', "the formula used Δ = 5, σ = 0.20 and two claims. Compare those inputs with the assistant's before deciding which number to use."],
