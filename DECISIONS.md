@@ -246,3 +246,38 @@ option was taken and is recorded here.
       partitioned differently — at sizes where the fourth verdict
       can occur, the "holds" it shows no longer includes the
       fourth verdict's share.
+
+12. **Addendum 4 to the ruling (2026-11-19).** Ruled by Claude
+    after re-checking the shipped build (`4f86819`: 44 of 44
+    tests, the page check); applied on the owner's proceed the
+    same day. It closes the judgement call left open in #11.
+    - #11 kept the core's three chances in the justification,
+      reasoning that at the required size the fourth verdict
+      cannot occur below about 97.5% power (1 − α/2, two-sided).
+      That holds at the defaults, but power is the researcher's
+      own answer: at 99%, on the plain check's inputs, the
+      justification's three lines added up to 101.5% at a true
+      effect of 0 and at Δ, and 114.5% at Δ/2 — the same double
+      count Addendum 3 removed from the table, one surface over.
+    - The justification now states its chances in the same
+      partition as the table — `exclusiveVerdicts`, applied
+      where the lines are written in src/core/plan.js — and
+      names the fourth verdict when it can occur ("an effect,
+      but smaller than Δ …"). It is display arithmetic on
+      numbers the core already computes, under the same narrow
+      copy exception as the cost line in #9: no probability
+      changes, and the math, the 17 rows and the architecture
+      test are untouched. Below the threshold the partition is
+      the identity (the overlap is 0), so at the default 80%
+      power — and at 90%, and one-sided — the justification is
+      byte-identical to what it was, and every pin on it stands
+      unedited.
+    - Row Q16 was added as a named test: at 99% power on the
+      plain check's inputs, each of the justification's three
+      lines sums to 100% ± 0.1 and names the fourth verdict.
+    - The scenario version is now 6. No input changed its
+      meaning, and a link set at or below about 97.5% power
+      produces the same justification as before; but a link set
+      above it — a setting the page offers — now reads the
+      partitioned chances where before it read the overlapping
+      ones, so by the rule of #10 and #11 the version moves.

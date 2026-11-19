@@ -42,10 +42,14 @@ import { GUARDRAILS } from '../copy.js';
 // the plainest check. The partition lives in the display layer
 // (src/copy.js); no input's meaning changed, but the numbers an old
 // link displays in its verdict table are partitioned differently,
-// so the version moves again.
+// so the version moves again. Addendum 4 (DECISIONS #12): the
+// justification states its three chances in the same partition and
+// names the fourth verdict when it occurs. Below about 97.5% power
+// an old link's justification is unchanged, but one set above it
+// reads differently, so the version moves again.
 
 export const id = 'two-condition';
-export const version = 5;
+export const version = 6;
 
 export const questions = [
   { key: 'givenSize', label: 'What size were you given?', kind: 'number',

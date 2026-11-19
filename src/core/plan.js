@@ -9,7 +9,7 @@
 
 import { alphaPerClaim } from './multiplicity.js';
 import { zCritical, zPower, powerAt, mdeAt, verdictChances, bothThresholdMultiple } from './budget.js';
-import { COPY, GUARDRAILS, powerCostLine } from '../copy.js';
+import { COPY, GUARDRAILS, powerCostLine, exclusiveVerdicts } from '../copy.js';
 import * as twoCondition from '../scenarios/two-condition.js';
 
 export const SCHEMA_VERSION = 1;
@@ -89,9 +89,25 @@ function justificationFor({ scenario, inputs, result }) {
   lines.push(`Required size: ${req.roundedTotal.toLocaleString('en-US')} units in total (${req.roundedPerPart.toLocaleString('en-US')} ${unitInfo.partName}); the unrounded value is ${num(req.total)} units. ${COPY.rounding.text}`);
   lines.push(`At that size the standard error is ${effectText(result.planned.se)}, so Δ spans ${num(result.planned.budgetRatio)} standard errors (Δ/SE = z_a + z_b = ${num(result.K)}). The smallest effect this size detects with ${pct(inputs.power, 0)} power is ${effectText(result.planned.mde)}.`);
   const v = result.planned.verdicts;
-  lines.push(`If the true effect is 0: holds ${pct(v.zero.holds)}, does not hold ${pct(v.zero.doesNotHold)}, inconclusive ${pct(v.zero.inconclusive)}.`);
-  lines.push(`If the true effect is Δ/2 (${effectText(inputs.delta / 2)}): holds ${pct(v.half.holds)}, does not hold ${pct(v.half.doesNotHold)}, inconclusive ${pct(v.half.inconclusive)}.`);
-  lines.push(`If the true effect is Δ (${effectText(inputs.delta)}): holds ${pct(v.delta.holds)}, does not hold ${pct(v.delta.doesNotHold)}, inconclusive ${pct(v.delta.inconclusive)}.`);
+  // The three chances are stated in the results table's mutually
+  // exclusive partition (Addendum 4 to the ruling, DECISIONS #12):
+  // the fourth verdict is carved out of both "holds" and "does not
+  // hold" and named when it can occur. It can occur only when the
+  // target power passes 1 − α/2 (about 97.5% two-sided); below that
+  // the partition is the identity and these lines read exactly as
+  // they always have. Display arithmetic on the core's chances,
+  // under the same narrow copy exception as the cost line above —
+  // no probability changes.
+  const verdictLine = (label, raw) => {
+    const c = exclusiveVerdicts(raw);
+    const cells = [`holds ${pct(c.holds)}`];
+    if (c.smaller > 0) cells.push(`an effect, but smaller than Δ ${pct(c.smaller)}`);
+    cells.push(`does not hold ${pct(c.doesNotHold)}`, `inconclusive ${pct(c.inconclusive)}`);
+    return `If the true effect is ${label}: ${cells.join(', ')}.`;
+  };
+  lines.push(verdictLine('0', v.zero));
+  lines.push(verdictLine(`Δ/2 (${effectText(inputs.delta / 2)})`, v.half));
+  lines.push(verdictLine(`Δ (${effectText(inputs.delta)})`, v.delta));
   if (result.given) {
     const g = result.given;
     lines.push('');

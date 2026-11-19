@@ -518,3 +518,42 @@ test('Q15: examples 1 to 3 keep their numbers', () => {
   close(100 * ex3.given.mde, 8.01, 0.01, 'Q15 example 3 MDE at the given size');
   close(ex3.given.verdicts.delta.holds, 0.376, 0.001, 'Q15 example 3 holds at delta');
 });
+
+// --- Addendum 4, the justification at high power: row Q16 -------------
+
+test('Q16: at 99% power the justification partitions its chances and names the fourth verdict', () => {
+  // The plain check's inputs (ex4, Q14) with the power set to 99% —
+  // above 1 − α/2, where the fourth verdict can occur at the required
+  // size. The justification states its three chances in the same
+  // mutually exclusive partition as the table (Addendum 3), so each
+  // line adds up to 100% and names the fourth verdict. Before this
+  // addendum the lines stated the core's overlapping chances and
+  // added up to 101.5% at 0 and Δ, 114.5% at Δ/2.
+  const ex4 = EXAMPLES[0];
+  const result = plan({ ...scenario.defaults(), ...ex4.inputs, power: 0.99 });
+  const lines = result.justification.split('\n')
+    .filter((l) => l.startsWith('If the true effect is'));
+  assert.equal(lines.length, 3, result.justification);
+  for (const line of lines) {
+    const shown = [...line.matchAll(/([\d.]+)%/g)].map((m) => parseFloat(m[1]));
+    const sum = shown.reduce((s, x) => s + x, 0);
+    assert.ok(Math.abs(sum - 100) <= 0.1 + 1e-9, `Q16: line sums to ${sum}: ${line}`);
+    assert.ok(line.includes('an effect, but smaller than Δ'), `Q16: fourth verdict named: ${line}`);
+  }
+  // The partition behind the words is exact, and power keeps its
+  // standard meaning: holds + smaller is the core's holds chance.
+  for (const k of ['zero', 'half', 'delta']) {
+    const raw = result.planned.verdicts[k];
+    const c = exclusiveVerdicts(raw);
+    assert.ok(raw.both > 0, `Q16 ${k}: the fourth verdict occurs at 99% power`);
+    close(c.holds + c.doesNotHold + c.smaller + c.inconclusive, 1, 1e-9, `Q16 ${k}: cells sum to 1`);
+    close(c.holds + c.smaller, raw.holds, 1e-12, `Q16 ${k}: holds + smaller = power's chance`);
+  }
+  // At the default 80% power the partition is the identity: no
+  // justification line names a fourth verdict that cannot occur.
+  const atDefault = plan({ ...scenario.defaults(), ...ex4.inputs });
+  for (const line of atDefault.justification.split('\n')
+    .filter((l) => l.startsWith('If the true effect is'))) {
+    assert.ok(!line.includes('smaller than Δ'), `Q16: default line unchanged: ${line}`);
+  }
+});
